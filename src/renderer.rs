@@ -1,5 +1,9 @@
-use std::io;
 use std::io::Write;
+use std::io::{self, BufWriter};
+
+use glam::Vec3;
+
+use crate::color::Color;
 
 pub struct Renderer {
     image_width: u32,
@@ -36,15 +40,28 @@ impl Renderer {
                 let g = (j as f32) / (self.image_height - 1) as f32;
                 let b: f32 = 0.25;
 
-                let ir = (r * 255.999) as u32;
-                let ig = (g * 255.999) as u32;
-                let ib = (b * 255.999) as u32;
-
-                write!(buf_writer, "{} {} {}\n", ir, ig, ib)?;
+                let color = Color::new(Vec3::new(r, g, b));
+                Self::write_color(&mut buf_writer, &color).unwrap();
             }
         }
 
         write!(stderr_buf_writer, "\nDone.\n")?;
+
+        buf_writer.flush().unwrap();
+        stderr_buf_writer.flush().unwrap();
+
+        Ok(())
+    }
+
+    fn write_color<T>(buf_writer: &mut BufWriter<T>, color: &Color) -> std::io::Result<()>
+    where
+        T: std::io::Write,
+    {
+        let ir = (color.as_vec().x * 255.999) as u32;
+        let ig = (color.as_vec().y * 255.999) as u32;
+        let ib = (color.as_vec().z * 255.999) as u32;
+
+        write!(buf_writer, "{} {} {}\n", ir, ig, ib)?;
 
         Ok(())
     }

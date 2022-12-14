@@ -1,3 +1,4 @@
+mod color;
 mod renderer;
 
 use renderer::Renderer;
