@@ -3,6 +3,7 @@ use std::io::{self, BufWriter};
 
 use crate::camera::Camera;
 use crate::color::Color;
+use crate::sphere::Sphere;
 
 pub struct Renderer {
     image_width: u32,
@@ -26,7 +27,7 @@ impl Renderer {
     }
 
     /// Outputs an image to stdout
-    pub fn render(&self, camera: &Camera) -> std::io::Result<()> {
+    pub fn render(&self, camera: &Camera, sphere: &Sphere) -> std::io::Result<()> {
         let stdout = io::stdout();
         let mut buf_writer = io::BufWriter::new(stdout);
 
@@ -47,7 +48,7 @@ impl Renderer {
                 let v = j as f32 / (self.image_height - 1) as f32;
                 let ray = camera.get_ray(u, v);
 
-                let color = ray.ray_color();
+                let color = ray.ray_color(&sphere);
                 Self::write_color(&mut buf_writer, &color).unwrap();
             }
         }

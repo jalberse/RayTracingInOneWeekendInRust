@@ -1,6 +1,6 @@
 use glam::{vec3, Vec3};
 
-use crate::color::Color;
+use crate::{color::Color, sphere::Sphere};
 
 pub struct Ray {
     pub origin: Vec3,
@@ -16,8 +16,10 @@ impl Ray {
         self.origin + t * self.direction
     }
 
-    pub fn ray_color(&self) -> Color {
-        // TODO For now, this just returns something which will make a gradient. We will actually do ray tracing here eventually!
+    pub fn ray_color(&self, sphere: &Sphere) -> Color {
+        if sphere.hit(&self) {
+            return vec3(1.0, 0.0, 0.0).into();
+        }
         let t = 0.5 * (self.direction.normalize().y + 1.0);
         ((1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0)).into()
     }
