@@ -1,4 +1,5 @@
 mod color;
+mod ray;
 mod renderer;
 
 use renderer::Renderer;
