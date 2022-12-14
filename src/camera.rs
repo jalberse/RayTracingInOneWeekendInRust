@@ -2,7 +2,7 @@ use crate::ray::Ray;
 
 use glam::Vec3;
 
-struct Camera {
+pub struct Camera {
     viewport_height: f32,
     viewport_width: f32,
     focal_length: f32,
