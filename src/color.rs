@@ -3,6 +3,7 @@ use glam::Vec3;
 pub struct Color(Vec3);
 
 impl Color {
+    #[allow(dead_code)]
     pub fn new(vec: Vec3) -> Color {
         Color(vec)
     }
