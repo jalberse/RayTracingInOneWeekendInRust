@@ -11,3 +11,9 @@ impl Color {
         &self.0
     }
 }
+
+impl From<Vec3> for Color {
+    fn from(val: Vec3) -> Color {
+        Color(val)
+    }
+}
