@@ -17,7 +17,7 @@ impl Camera {
         }
     }
 
-    pub fn get_ray(&self, u: Vec3, v: Vec3) -> Ray {
+    pub fn get_ray(&self, u: f32, v: f32) -> Ray {
         let origin = Vec3::ZERO;
         let horizontal = Vec3::new(self.viewport_width, 0.0, 0.0);
         let vertical = Vec3::new(0.0, self.viewport_height, 0.0);
