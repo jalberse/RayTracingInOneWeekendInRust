@@ -1,3 +1,9 @@
+mod renderer;
+
+use renderer::Renderer;
+
 fn main() {
-    println!("Hello, world!");
+    let renderer = Renderer::new(256, 256);
+
+    renderer.render().unwrap();
 }
