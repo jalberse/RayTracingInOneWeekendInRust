@@ -3,8 +3,8 @@ use glam::Vec3;
 use crate::ray::Ray;
 
 pub struct Sphere {
-    center: Vec3,
-    radius: f32,
+    pub center: Vec3,
+    pub radius: f32,
 }
 
 impl Sphere {
@@ -12,12 +12,16 @@ impl Sphere {
         Sphere { center, radius }
     }
 
-    pub fn hit(&self, ray: &Ray) -> bool {
+    pub fn hit(&self, ray: &Ray) -> f32 {
         let oc = ray.origin - self.center;
-        let a = ray.direction.dot(ray.direction);
-        let b = 2.0 * oc.dot(ray.direction);
-        let c = oc.dot(oc) - self.radius.powi(2);
-        let discriminant = b.powi(2) - 4.0 * a * c;
-        discriminant > 0.0
+        let a = ray.direction.length_squared();
+        let half_b = oc.dot(ray.direction);
+        let c = oc.length_squared() - self.radius.powi(2);
+        let discriminant = half_b.powi(2) - a * c;
+        if discriminant.is_sign_negative() {
+            return -1.0;
+        } else {
+            return (-half_b - f32::sqrt(discriminant)) / a;
+        }
     }
 }

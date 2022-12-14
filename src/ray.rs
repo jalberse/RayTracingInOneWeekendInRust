@@ -17,9 +17,12 @@ impl Ray {
     }
 
     pub fn ray_color(&self, sphere: &Sphere) -> Color {
-        if sphere.hit(&self) {
-            return vec3(1.0, 0.0, 0.0).into();
+        let t = sphere.hit(&self);
+        if t.is_sign_positive() {
+            let normal = (self.at(t) - sphere.center).normalize();
+            return (0.5 * vec3(normal.x + 1.0, normal.y + 1.0, normal.z + 1.0)).into();
         }
+        // Background
         let t = 0.5 * (self.direction.normalize().y + 1.0);
         ((1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0)).into()
     }
