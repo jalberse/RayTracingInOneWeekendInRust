@@ -1,6 +1,6 @@
 use glam::{vec3, Vec3};
 
-use crate::{color::Color, sphere::Sphere};
+use crate::{color::Color, hittable::hittable, sphere::Sphere};
 
 pub struct Ray {
     pub origin: Vec3,
@@ -17,10 +17,9 @@ impl Ray {
     }
 
     pub fn ray_color(&self, sphere: &Sphere) -> Color {
-        let t = sphere.hit(&self);
-        if t.is_sign_positive() {
-            let normal = (self.at(t) - sphere.center).normalize();
-            return (0.5 * vec3(normal.x + 1.0, normal.y + 1.0, normal.z + 1.0)).into();
+        let hit_record = sphere.hit(&self, 0.0, f32::INFINITY);
+        if let Some(hit_record) = hit_record {
+            return (0.5 * (hit_record.normal + vec3(1.0, 1.0, 1.0))).into();
         }
         // Background
         let t = 0.5 * (self.direction.normalize().y + 1.0);

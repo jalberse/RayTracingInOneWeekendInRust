@@ -1,5 +1,6 @@
 mod camera;
 mod color;
+mod hittable;
 mod ray;
 mod renderer;
 mod sphere;
