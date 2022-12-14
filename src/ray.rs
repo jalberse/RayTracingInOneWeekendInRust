@@ -2,7 +2,7 @@ use glam::{vec3, Vec3};
 
 use crate::color::Color;
 
-struct Ray {
+pub struct Ray {
     pub origin: Vec3,
     pub direction: Vec3,
 }
