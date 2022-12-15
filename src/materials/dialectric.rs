@@ -1,6 +1,7 @@
 use std::ops::Neg;
 
 use glam::dvec3;
+use rand::random;
 
 use crate::{hittable::HitRecord, ray::Ray};
 
@@ -20,6 +21,12 @@ impl Dialectric {
             index_of_refraction,
         }
     }
+
+    /// Shclick's approximation for reflectance
+    fn reflectance(cos: f64, ref_idx: f64) -> f64 {
+        let r0 = ((1.0 - ref_idx) / (1.0 + ref_idx)).powi(2);
+        r0 + (1.0 - r0) * (1.0 - cos).powi(5)
+    }
 }
 
 impl Scatterable for Dialectric {
@@ -37,7 +44,9 @@ impl Scatterable for Dialectric {
 
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
 
-        let direction = if cannot_refract {
+        let direction = if cannot_refract
+            || Dialectric::reflectance(cos_theta, refraction_ratio) > random::<f64>()
+        {
             utils::reflect(unit_direction, hit_record.normal)
         } else {
             utils::refract(unit_direction, hit_record.normal, refraction_ratio)
