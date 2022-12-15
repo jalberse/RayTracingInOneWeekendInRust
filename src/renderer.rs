@@ -86,10 +86,11 @@ impl Renderer {
     where
         T: std::io::Write,
     {
+        // Sqrt is taken for gamme correction
         let scale = 1.0 / samples_per_pixel as f64;
-        let r = f64::clamp(color.x * scale, 0.0, 0.999);
-        let g = f64::clamp(color.y * scale, 0.0, 0.999);
-        let b = f64::clamp(color.z * scale, 0.0, 0.999);
+        let r = f64::clamp(f64::sqrt(color.x * scale), 0.0, 0.999);
+        let g = f64::clamp(f64::sqrt(color.y * scale), 0.0, 0.999);
+        let b = f64::clamp(f64::sqrt(color.z * scale), 0.0, 0.999);
 
         let ir = (r * 256.0) as u32;
         let ig = (g * 256.0) as u32;
