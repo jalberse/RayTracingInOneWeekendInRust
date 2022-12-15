@@ -26,8 +26,8 @@ fn main() {
 
     let material_ground = Material::Lambertian(Lambertian::new(dvec3(0.8, 0.8, 0.0)));
     let material_center = Material::Lambertian(Lambertian::new(dvec3(0.7, 0.3, 0.3)));
-    let material_left_sphere = Material::Metal(Metal::new(dvec3(0.8, 0.8, 0.8)));
-    let material_right_sphere = Material::Metal(Metal::new(dvec3(0.8, 0.8, 0.8)));
+    let material_left_sphere = Material::Metal(Metal::new(dvec3(0.8, 0.8, 0.8), 0.3));
+    let material_right_sphere = Material::Metal(Metal::new(dvec3(0.8, 0.6, 0.2), 1.0));
 
     let sphere = Box::new(Sphere::new(
         DVec3::new(0.0, 0.0, -1.0),

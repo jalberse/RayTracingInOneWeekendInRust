@@ -2,7 +2,10 @@ use glam::DVec3;
 
 use crate::{hittable::HitRecord, ray::Ray, utils};
 
-use super::material::{ScatterRecord, Scatterable};
+use super::{
+    material::{ScatterRecord, Scatterable},
+    utils::random_unit_vector,
+};
 
 #[derive(Clone, Copy)]
 pub struct Lambertian {
@@ -17,7 +20,7 @@ impl Lambertian {
 
 impl Scatterable for Lambertian {
     fn scatter(&self, _ray: &Ray, hit_record: &HitRecord) -> Option<ScatterRecord> {
-        let scatter_direction = hit_record.normal + Ray::random_unit_vector();
+        let scatter_direction = hit_record.normal + random_unit_vector();
         // Catch degenerate scatter directions
         let scatter_direction = if utils::near_zero(&scatter_direction) {
             hit_record.normal
