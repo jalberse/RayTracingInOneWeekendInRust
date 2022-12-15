@@ -29,7 +29,7 @@ impl Ray {
         let hit_record = world.hit(&self, 0.001, f64::INFINITY);
         if let Some(hit_record) = hit_record {
             let reflection_target =
-                hit_record.point + hit_record.normal + Self::random_in_unit_sphere();
+                hit_record.point + hit_record.normal + Self::random_on_unit_sphere();
             let reflection_ray = Ray::new(hit_record.point, reflection_target - hit_record.point);
             return 0.5 * reflection_ray.ray_color(world, depth - 1);
         }
@@ -51,5 +51,9 @@ impl Ray {
                 return vec;
             }
         }
+    }
+
+    fn random_on_unit_sphere() -> DVec3 {
+        Self::random_in_unit_sphere().normalize()
     }
 }
