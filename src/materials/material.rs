@@ -2,12 +2,13 @@ use glam::DVec3;
 
 use crate::{hittable::HitRecord, ray::Ray};
 
-use super::{lambertian::Lambertian, metal::Metal};
+use super::{dialectric::Dialectric, lambertian::Lambertian, metal::Metal};
 
 #[derive(Clone, Copy)]
 pub enum Material {
     Lambertian(Lambertian),
     Metal(Metal),
+    Dialectric(Dialectric),
 }
 
 pub struct ScatterRecord {
@@ -25,6 +26,7 @@ impl Scatterable for Material {
         match self {
             Material::Lambertian(mat) => mat.scatter(ray, hit_record),
             Material::Metal(mat) => mat.scatter(ray, hit_record),
+            Material::Dialectric(mat) => mat.scatter(ray, hit_record),
         }
     }
 }

@@ -9,7 +9,7 @@ mod utils;
 use camera::Camera;
 use glam::{dvec3, DVec3};
 use hittable::HittableList;
-use materials::{lambertian::Lambertian, material::Material, metal::Metal};
+use materials::{dialectric::Dialectric, lambertian::Lambertian, material::Material, metal::Metal};
 use renderer::Renderer;
 use sphere::Sphere;
 
@@ -25,8 +25,8 @@ fn main() {
     let renderer = Renderer::from_aspect_ratio(400, 16.0 / 9.0);
 
     let material_ground = Material::Lambertian(Lambertian::new(dvec3(0.8, 0.8, 0.0)));
-    let material_center = Material::Lambertian(Lambertian::new(dvec3(0.7, 0.3, 0.3)));
-    let material_left_sphere = Material::Metal(Metal::new(dvec3(0.8, 0.8, 0.8), 0.3));
+    let material_center = Material::Lambertian(Lambertian::new(dvec3(0.1, 0.2, 0.5)));
+    let material_left_sphere = Material::Dialectric(Dialectric::new(1.5));
     let material_right_sphere = Material::Metal(Metal::new(dvec3(0.8, 0.6, 0.2), 1.0));
 
     let sphere = Box::new(Sphere::new(
