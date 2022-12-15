@@ -1,3 +1,5 @@
+use std::ops::Neg;
+
 use glam::{dvec3, DVec3};
 use rand::Rng;
 
@@ -38,6 +40,7 @@ impl Ray {
         (1.0 - t) * dvec3(1.0, 1.0, 1.0) + t * dvec3(0.5, 0.7, 1.0)
     }
 
+    /// Useful for faux-lambertian diffuse shading
     fn random_in_unit_sphere() -> DVec3 {
         let mut rng = rand::thread_rng();
 
@@ -53,7 +56,19 @@ impl Ray {
         }
     }
 
+    /// Useful for lambertian diffuse shading
     fn random_on_unit_sphere() -> DVec3 {
         Self::random_in_unit_sphere().normalize()
+    }
+
+    /// Useful as an alternative diffuse shading approach compared to random_on_unit_sphere()
+    #[allow(dead_code)]
+    fn random_in_hemisphere(normal: &DVec3) -> DVec3 {
+        let in_unit_sphere = Self::random_in_unit_sphere();
+        if in_unit_sphere.dot(*normal).is_sign_positive() {
+            in_unit_sphere
+        } else {
+            in_unit_sphere.neg()
+        }
     }
 }
