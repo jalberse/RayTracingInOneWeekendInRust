@@ -1,18 +1,18 @@
 use std::ops::Neg;
 
-use glam::Vec3;
+use glam::DVec3;
 
 use crate::ray::Ray;
 
 pub struct HitRecord {
-    pub point: Vec3,
-    pub normal: Vec3,
-    pub t: f32,
+    pub point: DVec3,
+    pub normal: DVec3,
+    pub t: f64,
     pub front_face: bool,
 }
 
 impl HitRecord {
-    pub fn new(ray: &Ray, outward_normal: Vec3, t: f32) -> HitRecord {
+    pub fn new(ray: &Ray, outward_normal: DVec3, t: f64) -> HitRecord {
         let point = ray.at(t);
         let front_face = ray.direction.dot(outward_normal).is_sign_negative();
         let normal = if front_face {
@@ -30,7 +30,7 @@ impl HitRecord {
 }
 
 pub trait Hittable {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
 }
 
 pub struct HittableList<T>
@@ -60,7 +60,7 @@ where
         self.objects.push(object);
     }
 
-    pub fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         self.objects
             .iter()
             .fold(None, |closest_yet, object| -> Option<HitRecord> {

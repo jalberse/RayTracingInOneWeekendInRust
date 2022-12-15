@@ -1,32 +1,32 @@
-use glam::{vec3, Vec3};
+use glam::{dvec3, DVec3};
 use rand::Rng;
 
 use crate::hittable::{Hittable, HittableList};
 
 pub struct Ray {
-    pub origin: Vec3,
-    pub direction: Vec3,
+    pub origin: DVec3,
+    pub direction: DVec3,
 }
 
 impl Ray {
-    pub fn new(origin: Vec3, direction: Vec3) -> Ray {
+    pub fn new(origin: DVec3, direction: DVec3) -> Ray {
         Ray { origin, direction }
     }
 
-    pub fn at(&self, t: f32) -> Vec3 {
+    pub fn at(&self, t: f64) -> DVec3 {
         self.origin + t * self.direction
     }
 
-    pub fn ray_color<T>(&self, world: &HittableList<T>, depth: u32) -> Vec3
+    pub fn ray_color<T>(&self, world: &HittableList<T>, depth: u32) -> DVec3
     where
         T: Hittable,
     {
         // Ray bounce limit reached; accumulate no further light.
         if depth <= 0 {
-            return Vec3::ZERO;
+            return DVec3::ZERO;
         }
 
-        let hit_record = world.hit(&self, 0.0, f32::INFINITY);
+        let hit_record = world.hit(&self, 0.0, f64::INFINITY);
         if let Some(hit_record) = hit_record {
             let reflection_target =
                 hit_record.point + hit_record.normal + Self::random_in_unit_sphere();
@@ -35,14 +35,14 @@ impl Ray {
         }
         // Background
         let t = 0.5 * (self.direction.normalize().y + 1.0);
-        (1.0 - t) * vec3(1.0, 1.0, 1.0) + t * vec3(0.5, 0.7, 1.0)
+        (1.0 - t) * dvec3(1.0, 1.0, 1.0) + t * dvec3(0.5, 0.7, 1.0)
     }
 
-    fn random_in_unit_sphere() -> Vec3 {
+    fn random_in_unit_sphere() -> DVec3 {
         let mut rng = rand::thread_rng();
 
         loop {
-            let vec = Vec3::new(
+            let vec = DVec3::new(
                 rng.gen_range(-1.0..1.0),
                 rng.gen_range(-1.0..1.0),
                 rng.gen_range(-1.0..1.0),

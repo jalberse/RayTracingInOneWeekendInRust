@@ -1,7 +1,7 @@
 use std::io::Write;
 use std::io::{self, BufWriter};
 
-use glam::{vec3, Vec3};
+use glam::{dvec3, DVec3};
 use rand::random;
 
 use crate::camera::Camera;
@@ -55,11 +55,11 @@ impl Renderer {
             write!(stderr_buf_writer, "\rScanlines remaining: {:04}", j)?;
             stderr_buf_writer.flush().unwrap();
             for i in 0..self.image_width {
-                let color: Vec3 = {
-                    let mut color_accumulator = vec3(0.0, 0.0, 0.0);
+                let color: DVec3 = {
+                    let mut color_accumulator = dvec3(0.0, 0.0, 0.0);
                     for _ in 0..samples_per_pixel {
-                        let u = (i as f32 + random::<f32>()) / (self.image_width - 1) as f32;
-                        let v = (j as f32 + random::<f32>()) / (self.image_height - 1) as f32;
+                        let u = (i as f64 + random::<f64>()) / (self.image_width - 1) as f64;
+                        let v = (j as f64 + random::<f64>()) / (self.image_height - 1) as f64;
                         let ray = camera.get_ray(u, v);
 
                         color_accumulator += ray.ray_color(&world, max_depth);
@@ -80,16 +80,16 @@ impl Renderer {
 
     fn write_color<T>(
         buf_writer: &mut BufWriter<T>,
-        color: &Vec3,
+        color: &DVec3,
         samples_per_pixel: u32,
     ) -> std::io::Result<()>
     where
         T: std::io::Write,
     {
-        let scale = 1.0 / samples_per_pixel as f32;
-        let r = f32::clamp(color.x * scale, 0.0, 0.999);
-        let g = f32::clamp(color.y * scale, 0.0, 0.999);
-        let b = f32::clamp(color.z * scale, 0.0, 0.999);
+        let scale = 1.0 / samples_per_pixel as f64;
+        let r = f64::clamp(color.x * scale, 0.0, 0.999);
+        let g = f64::clamp(color.y * scale, 0.0, 0.999);
+        let b = f64::clamp(color.z * scale, 0.0, 0.999);
 
         let ir = (r * 256.0) as u32;
         let ig = (g * 256.0) as u32;
