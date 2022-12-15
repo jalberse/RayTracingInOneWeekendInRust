@@ -1,6 +1,9 @@
 use std::io::Write;
 use std::io::{self, BufWriter};
 
+use glam::vec3;
+use rand::random;
+
 use crate::camera::Camera;
 use crate::color::Color;
 use crate::hittable::{Hittable, HittableList};
@@ -27,7 +30,12 @@ impl Renderer {
     }
 
     /// Outputs an image to stdout
-    pub fn render<T>(&self, camera: &Camera, world: &HittableList<T>) -> std::io::Result<()>
+    pub fn render<T>(
+        &self,
+        camera: &Camera,
+        world: &HittableList<T>,
+        samples_per_pixel: u32,
+    ) -> std::io::Result<()>
     where
         T: Hittable,
     {
@@ -44,15 +52,21 @@ impl Renderer {
         )?;
 
         for j in (0..self.image_height).rev() {
+            write!(stderr_buf_writer, "\rScanlines remaining: {:04}", j)?;
+            stderr_buf_writer.flush().unwrap();
             for i in 0..self.image_width {
-                write!(stderr_buf_writer, "\rScanlines remaining: {}", j)?;
+                let color = {
+                    let mut color_accumulator = vec3(0.0, 0.0, 0.0);
+                    for _ in 0..samples_per_pixel {
+                        let u = (i as f32 + random::<f32>()) / (self.image_width - 1) as f32;
+                        let v = (j as f32 + random::<f32>()) / (self.image_height - 1) as f32;
+                        let ray = camera.get_ray(u, v);
 
-                let u = i as f32 / (self.image_width - 1) as f32;
-                let v = j as f32 / (self.image_height - 1) as f32;
-                let ray = camera.get_ray(u, v);
-
-                let color = ray.ray_color(&world);
-                Self::write_color(&mut buf_writer, &color).unwrap();
+                        color_accumulator += *ray.ray_color(&world).as_vec();
+                    }
+                    color_accumulator.into()
+                };
+                Self::write_color(&mut buf_writer, &color, samples_per_pixel).unwrap();
             }
         }
 
@@ -64,13 +78,22 @@ impl Renderer {
         Ok(())
     }
 
-    fn write_color<T>(buf_writer: &mut BufWriter<T>, color: &Color) -> std::io::Result<()>
+    fn write_color<T>(
+        buf_writer: &mut BufWriter<T>,
+        color: &Color,
+        samples_per_pixel: u32,
+    ) -> std::io::Result<()>
     where
         T: std::io::Write,
     {
-        let ir = (color.as_vec().x * 255.999) as u32;
-        let ig = (color.as_vec().y * 255.999) as u32;
-        let ib = (color.as_vec().z * 255.999) as u32;
+        let scale = 1.0 / samples_per_pixel as f32;
+        let r = f32::clamp(color.as_vec().x * scale, 0.0, 0.999);
+        let g = f32::clamp(color.as_vec().y * scale, 0.0, 0.999);
+        let b = f32::clamp(color.as_vec().z * scale, 0.0, 0.999);
+
+        let ir = (r * 255.999) as u32;
+        let ig = (g * 255.999) as u32;
+        let ib = (b * 255.999) as u32;
 
         write!(buf_writer, "{} {} {}\n", ir, ig, ib)?;
 

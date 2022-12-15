@@ -25,6 +25,6 @@ fn main() {
     let sphere = Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5));
     let sphere_2 = Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0));
     let world = HittableList::from_vec(vec![sphere, sphere_2]);
-
-    renderer.render(&camera, &world).unwrap();
+    let samples_per_pixel = 100;
+    renderer.render(&camera, &world, samples_per_pixel).unwrap();
 }
