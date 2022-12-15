@@ -1,11 +1,10 @@
 use std::io::Write;
 use std::io::{self, BufWriter};
 
-use glam::vec3;
+use glam::{vec3, Vec3};
 use rand::random;
 
 use crate::camera::Camera;
-use crate::color::Color;
 use crate::hittable::{Hittable, HittableList};
 
 pub struct Renderer {
@@ -35,6 +34,7 @@ impl Renderer {
         camera: &Camera,
         world: &HittableList<T>,
         samples_per_pixel: u32,
+        max_depth: u32,
     ) -> std::io::Result<()>
     where
         T: Hittable,
@@ -55,14 +55,14 @@ impl Renderer {
             write!(stderr_buf_writer, "\rScanlines remaining: {:04}", j)?;
             stderr_buf_writer.flush().unwrap();
             for i in 0..self.image_width {
-                let color = {
+                let color: Vec3 = {
                     let mut color_accumulator = vec3(0.0, 0.0, 0.0);
                     for _ in 0..samples_per_pixel {
                         let u = (i as f32 + random::<f32>()) / (self.image_width - 1) as f32;
                         let v = (j as f32 + random::<f32>()) / (self.image_height - 1) as f32;
                         let ray = camera.get_ray(u, v);
 
-                        color_accumulator += *ray.ray_color(&world).as_vec();
+                        color_accumulator += ray.ray_color(&world, max_depth);
                     }
                     color_accumulator.into()
                 };
@@ -80,20 +80,20 @@ impl Renderer {
 
     fn write_color<T>(
         buf_writer: &mut BufWriter<T>,
-        color: &Color,
+        color: &Vec3,
         samples_per_pixel: u32,
     ) -> std::io::Result<()>
     where
         T: std::io::Write,
     {
         let scale = 1.0 / samples_per_pixel as f32;
-        let r = f32::clamp(color.as_vec().x * scale, 0.0, 0.999);
-        let g = f32::clamp(color.as_vec().y * scale, 0.0, 0.999);
-        let b = f32::clamp(color.as_vec().z * scale, 0.0, 0.999);
+        let r = f32::clamp(color.x * scale, 0.0, 0.999);
+        let g = f32::clamp(color.y * scale, 0.0, 0.999);
+        let b = f32::clamp(color.z * scale, 0.0, 0.999);
 
-        let ir = (r * 255.999) as u32;
-        let ig = (g * 255.999) as u32;
-        let ib = (b * 255.999) as u32;
+        let ir = (r * 256.0) as u32;
+        let ig = (g * 256.0) as u32;
+        let ib = (b * 256.0) as u32;
 
         write!(buf_writer, "{} {} {}\n", ir, ig, ib)?;
 

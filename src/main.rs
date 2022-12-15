@@ -1,5 +1,4 @@
 mod camera;
-mod color;
 mod hittable;
 mod ray;
 mod renderer;
@@ -26,5 +25,8 @@ fn main() {
     let sphere_2 = Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0));
     let world = HittableList::from_vec(vec![sphere, sphere_2]);
     let samples_per_pixel = 100;
-    renderer.render(&camera, &world, samples_per_pixel).unwrap();
+    let max_depth = 50;
+    renderer
+        .render(&camera, &world, samples_per_pixel, max_depth)
+        .unwrap();
 }
