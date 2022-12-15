@@ -26,7 +26,7 @@ impl Ray {
             return DVec3::ZERO;
         }
 
-        let hit_record = world.hit(&self, 0.0, f64::INFINITY);
+        let hit_record = world.hit(&self, 0.001, f64::INFINITY);
         if let Some(hit_record) = hit_record {
             let reflection_target =
                 hit_record.point + hit_record.normal + Self::random_in_unit_sphere();
