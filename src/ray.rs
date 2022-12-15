@@ -33,7 +33,7 @@ impl Ray {
 
         let hit_record = world.hit(&self, 0.001, f64::INFINITY);
         if let Some(hit_record) = hit_record {
-            if let Some(scatter_record) = hit_record.material.scatter(&hit_record) {
+            if let Some(scatter_record) = hit_record.material.scatter(&self, &hit_record) {
                 return scatter_record.attenuation * scatter_record.ray.ray_color(world, depth - 1);
             } else {
                 return DVec3::ZERO;
