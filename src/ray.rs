@@ -3,7 +3,10 @@ use std::ops::Neg;
 use glam::{dvec3, DVec3};
 use rand::Rng;
 
-use crate::hittable::{Hittable, HittableList};
+use crate::{
+    hittable::{Hittable, HittableList},
+    materials::material::Scatterable,
+};
 
 pub struct Ray {
     pub origin: DVec3,
@@ -30,10 +33,11 @@ impl Ray {
 
         let hit_record = world.hit(&self, 0.001, f64::INFINITY);
         if let Some(hit_record) = hit_record {
-            let reflection_target =
-                hit_record.point + hit_record.normal + Self::random_on_unit_sphere();
-            let reflection_ray = Ray::new(hit_record.point, reflection_target - hit_record.point);
-            return 0.5 * reflection_ray.ray_color(world, depth - 1);
+            if let Some(scatter_record) = hit_record.material.scatter(&hit_record) {
+                return scatter_record.attenuation * scatter_record.ray.ray_color(world, depth - 1);
+            } else {
+                return DVec3::ZERO;
+            }
         }
         // Background
         let t = 0.5 * (self.direction.normalize().y + 1.0);
@@ -41,7 +45,7 @@ impl Ray {
     }
 
     /// Useful for faux-lambertian diffuse shading
-    fn random_in_unit_sphere() -> DVec3 {
+    pub fn random_in_unit_sphere() -> DVec3 {
         let mut rng = rand::thread_rng();
 
         loop {
@@ -57,13 +61,13 @@ impl Ray {
     }
 
     /// Useful for lambertian diffuse shading
-    fn random_on_unit_sphere() -> DVec3 {
+    pub fn random_unit_vector() -> DVec3 {
         Self::random_in_unit_sphere().normalize()
     }
 
     /// Useful as an alternative diffuse shading approach compared to random_on_unit_sphere()
     #[allow(dead_code)]
-    fn random_in_hemisphere(normal: &DVec3) -> DVec3 {
+    pub fn random_in_hemisphere(normal: &DVec3) -> DVec3 {
         let in_unit_sphere = Self::random_in_unit_sphere();
         if in_unit_sphere.dot(*normal).is_sign_positive() {
             in_unit_sphere

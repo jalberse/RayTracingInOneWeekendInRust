@@ -2,17 +2,23 @@ use glam::DVec3;
 
 use crate::{
     hittable::{HitRecord, Hittable},
+    materials::material::Material,
     ray::Ray,
 };
 
 pub struct Sphere {
     pub center: DVec3,
     pub radius: f64,
+    pub material: Material,
 }
 
 impl Sphere {
-    pub fn new(center: DVec3, radius: f64) -> Sphere {
-        Sphere { center, radius }
+    pub fn new(center: DVec3, radius: f64, material: Material) -> Sphere {
+        Sphere {
+            center,
+            radius,
+            material,
+        }
     }
 }
 
@@ -38,6 +44,6 @@ impl Hittable for Sphere {
         let t = root;
         let point = ray.at(root);
         let normal = (point - self.center) / self.radius;
-        Some(HitRecord::new(&ray, normal, t))
+        Some(HitRecord::new(&ray, normal, t, self.material))
     }
 }

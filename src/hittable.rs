@@ -2,17 +2,18 @@ use std::ops::Neg;
 
 use glam::DVec3;
 
-use crate::ray::Ray;
+use crate::{materials::material::Material, ray::Ray};
 
 pub struct HitRecord {
     pub point: DVec3,
     pub normal: DVec3,
     pub t: f64,
     pub front_face: bool,
+    pub material: Material,
 }
 
 impl HitRecord {
-    pub fn new(ray: &Ray, outward_normal: DVec3, t: f64) -> HitRecord {
+    pub fn new(ray: &Ray, outward_normal: DVec3, t: f64, material: Material) -> HitRecord {
         let point = ray.at(t);
         let front_face = ray.direction.dot(outward_normal).is_sign_negative();
         let normal = if front_face {
@@ -25,6 +26,7 @@ impl HitRecord {
             normal,
             t,
             front_face,
+            material,
         }
     }
 }
