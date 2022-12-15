@@ -44,12 +44,23 @@ fn main() {
         0.5,
         material_left_sphere,
     ));
+    let sphere_left_inner = Box::new(Sphere::new(
+        DVec3::new(-1.0, 0.0, -1.0),
+        -0.4,
+        material_left_sphere,
+    ));
     let sphere_right = Box::new(Sphere::new(
         DVec3::new(1.0, 0.0, -1.0),
         0.5,
         material_right_sphere,
     ));
-    let world = HittableList::from_vec(vec![sphere, ground, sphere_left, sphere_right]);
+    let world = HittableList::from_vec(vec![
+        sphere,
+        ground,
+        sphere_left,
+        sphere_left_inner,
+        sphere_right,
+    ]);
     let samples_per_pixel = 100;
     let max_depth = 50;
     renderer
