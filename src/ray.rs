@@ -1,6 +1,9 @@
 use glam::{vec3, Vec3};
 
-use crate::{color::Color, hittable::hittable, sphere::Sphere};
+use crate::{
+    color::Color,
+    hittable::{Hittable, HittableList},
+};
 
 pub struct Ray {
     pub origin: Vec3,
@@ -16,8 +19,11 @@ impl Ray {
         self.origin + t * self.direction
     }
 
-    pub fn ray_color(&self, sphere: &Sphere) -> Color {
-        let hit_record = sphere.hit(&self, 0.0, f32::INFINITY);
+    pub fn ray_color<T>(&self, world: &HittableList<T>) -> Color
+    where
+        T: Hittable,
+    {
+        let hit_record = world.hit(&self, 0.0, f32::INFINITY);
         if let Some(hit_record) = hit_record {
             return (0.5 * (hit_record.normal + vec3(1.0, 1.0, 1.0))).into();
         }

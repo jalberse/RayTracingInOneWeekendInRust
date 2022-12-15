@@ -1,7 +1,7 @@
 use glam::Vec3;
 
 use crate::{
-    hittable::{hittable, HitRecord},
+    hittable::{HitRecord, Hittable},
     ray::Ray,
 };
 
@@ -16,7 +16,7 @@ impl Sphere {
     }
 }
 
-impl hittable for Sphere {
+impl Hittable for Sphere {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         let oc = ray.origin - self.center;
         let a = ray.direction.length_squared();
@@ -26,11 +26,11 @@ impl hittable for Sphere {
         if discriminant.is_sign_negative() {
             return None;
         }
-        let sqrt_determinant = f32::sqrt(discriminant);
-        let root = (-half_b - sqrt_determinant) / a;
-        if root < t_min || root > t_max {
-            let root = (-half_b + sqrt_determinant) / a;
-            if root < t_min || root > t_max {
+        let sqrt_discriminant = f32::sqrt(discriminant);
+        let mut root = (-half_b - sqrt_discriminant) / a;
+        if root < t_min || t_max < root {
+            root = (-half_b + sqrt_discriminant) / a;
+            if root < t_min || t_max < root {
                 return None;
             }
         }
