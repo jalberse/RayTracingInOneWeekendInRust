@@ -1,10 +1,10 @@
 use glam::DVec3;
 
-use crate::{hittable::HitRecord, ray::Ray, utils};
+use crate::{hittable::HitRecord, ray::Ray};
 
 use super::{
     material::{ScatterRecord, Scatterable},
-    utils::random_in_unit_sphere,
+    utils,
 };
 
 #[derive(Clone, Copy)]
@@ -27,7 +27,7 @@ impl Scatterable for Metal {
         let reflected = utils::reflect(ray.direction.normalize(), hit_record.normal);
         let scattered = Ray::new(
             hit_record.point,
-            reflected + self.fuzz * random_in_unit_sphere(),
+            reflected + self.fuzz * utils::random_in_unit_sphere(),
         );
         let attenuation = self.albedo;
         if scattered.direction.dot(hit_record.normal) > 0.0 {

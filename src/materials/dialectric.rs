@@ -2,7 +2,7 @@ use std::ops::Neg;
 
 use glam::dvec3;
 
-use crate::{hittable::HitRecord, ray::Ray, utils::reflect};
+use crate::{hittable::HitRecord, ray::Ray};
 
 use super::{
     material::{ScatterRecord, Scatterable},
@@ -38,7 +38,7 @@ impl Scatterable for Dialectric {
         let cannot_refract = refraction_ratio * sin_theta > 1.0;
 
         let direction = if cannot_refract {
-            reflect(unit_direction, hit_record.normal)
+            utils::reflect(unit_direction, hit_record.normal)
         } else {
             utils::refract(unit_direction, hit_record.normal, refraction_ratio)
         };

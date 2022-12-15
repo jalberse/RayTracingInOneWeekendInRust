@@ -34,6 +34,10 @@ pub fn random_in_hemisphere(normal: &DVec3) -> DVec3 {
     }
 }
 
+pub fn reflect(vec: DVec3, normal: DVec3) -> DVec3 {
+    vec - 2.0 * vec.dot(normal) * normal
+}
+
 pub fn refract(uv: DVec3, normal: DVec3, etai_over_etat: f64) -> DVec3 {
     let cos_theta = f64::min(uv.neg().dot(normal), 1.0);
     let r_out_perp = etai_over_etat * (uv + cos_theta * normal);
