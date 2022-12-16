@@ -15,13 +15,7 @@ use sphere::Sphere;
 
 fn main() {
     let aspect_ratio = 16.0 / 9.0;
-    let viewport_height = 2.0;
-    let camera = Camera::new(
-        DVec3::ZERO,
-        viewport_height,
-        aspect_ratio * viewport_height,
-        1.0,
-    );
+    let camera = Camera::new(90.0, aspect_ratio);
     let renderer = Renderer::from_aspect_ratio(400, 16.0 / 9.0);
 
     let material_ground = Material::Lambertian(Lambertian::new(dvec3(0.8, 0.8, 0.0)));
