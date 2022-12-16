@@ -15,12 +15,16 @@ use sphere::Sphere;
 
 fn main() {
     let aspect_ratio = 16.0 / 9.0;
+    let look_from = dvec3(-2.0, 2.0, 1.0);
+    let look_at = dvec3(0.0, 0.0, -1.0);
     let camera = Camera::new(
-        dvec3(-2.0, 2.0, 1.0),
-        dvec3(0.0, 0.0, -1.0),
+        look_from,
+        look_at,
         dvec3(0.0, 1.0, 0.0),
-        90.0,
+        20.0,
         aspect_ratio,
+        2.0,
+        (look_from - look_at).length(),
     );
     let renderer = Renderer::from_aspect_ratio(400, 16.0 / 9.0);
 
