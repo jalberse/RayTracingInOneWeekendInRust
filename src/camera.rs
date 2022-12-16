@@ -10,19 +10,26 @@ pub struct Camera {
 }
 
 impl Camera {
-    pub fn new(vertical_field_of_view: f64, aspect_ratio: f64) -> Camera {
+    pub fn new(
+        look_from: DVec3,
+        look_at: DVec3,
+        view_up: DVec3,
+        vertical_field_of_view: f64,
+        aspect_ratio: f64,
+    ) -> Camera {
         let theta = f64::to_radians(vertical_field_of_view);
         let h = f64::tan(theta / 2.0);
         let viewport_height = 2.0 * h;
         let viewport_width = aspect_ratio * viewport_height;
 
-        let focal_length = 1.0;
+        let w = (look_from - look_at).normalize();
+        let u = view_up.cross(w).normalize();
+        let v = w.cross(u);
 
-        let origin = DVec3::ZERO;
-        let horizontal = DVec3::new(viewport_width, 0.0, 0.0);
-        let vertical = DVec3::new(0.0, viewport_height, 0.0);
-        let lower_left_corner =
-            DVec3::ZERO - horizontal / 2.0 - vertical / 2.0 - DVec3::new(0.0, 0.0, focal_length);
+        let origin = look_from;
+        let horizontal = viewport_width * u;
+        let vertical = viewport_height * v;
+        let lower_left_corner = origin - horizontal / 2.0 - vertical / 2.0 - w;
         Camera {
             origin,
             horizontal,
