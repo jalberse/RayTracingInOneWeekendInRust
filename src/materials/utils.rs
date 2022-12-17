@@ -1,7 +1,7 @@
 use std::ops::Neg;
 
 use glam::DVec3;
-use rand::Rng;
+use rand::{random, Rng};
 
 pub fn random_in_unit_sphere() -> DVec3 {
     let mut rng = rand::thread_rng();
@@ -43,4 +43,21 @@ pub fn refract(uv: DVec3, normal: DVec3, etai_over_etat: f64) -> DVec3 {
     let r_out_perp = etai_over_etat * (uv + cos_theta * normal);
     let r_out_parallel = -f64::sqrt(f64::abs(1.0 - r_out_perp.length_squared())) * normal;
     r_out_parallel + r_out_perp
+}
+
+pub fn random_color() -> DVec3 {
+    DVec3::new(random::<f64>(), random::<f64>(), random::<f64>())
+}
+
+/// Gets a random color where r, g, b are all bound by min and max (and by 0.0 and 1.0)
+pub fn random_color_range(min: f64, max: f64) -> DVec3 {
+    let min = f64::max(min, 0.0);
+    let max = f64::min(1.0, max);
+
+    let mut rng = rand::thread_rng();
+    DVec3::new(
+        rng.gen_range(min..max),
+        rng.gen_range(min..max),
+        rng.gen_range(min..max),
+    )
 }

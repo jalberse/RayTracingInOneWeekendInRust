@@ -53,10 +53,6 @@ where
         }
     }
 
-    pub fn from_vec(objects: Vec<Box<T>>) -> HittableList<T> {
-        HittableList { objects }
-    }
-
     #[allow(dead_code)]
     pub fn add(&mut self, object: Box<T>) {
         self.objects.push(object);
