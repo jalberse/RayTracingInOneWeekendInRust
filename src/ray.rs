@@ -1,9 +1,6 @@
 use glam::{dvec3, DVec3};
 
-use crate::{
-    hittable::{Hittable, HittableList},
-    materials::material::Scatterable,
-};
+use crate::{hittable::HittableList, materials::material::Scatterable};
 
 pub struct Ray {
     pub origin: DVec3,
@@ -19,10 +16,7 @@ impl Ray {
         self.origin + t * self.direction
     }
 
-    pub fn ray_color<T>(&self, world: &HittableList<T>, depth: u32) -> DVec3
-    where
-        T: Hittable,
-    {
+    pub fn ray_color(&self, world: &HittableList, depth: u32) -> DVec3 {
         // Ray bounce limit reached; accumulate no further light.
         if depth <= 0 {
             return DVec3::ZERO;

@@ -5,7 +5,7 @@ use glam::{dvec3, DVec3};
 use rand::random;
 
 use crate::camera::Camera;
-use crate::hittable::{Hittable, HittableList};
+use crate::hittable::HittableList;
 
 pub struct Renderer {
     image_width: u32,
@@ -29,16 +29,13 @@ impl Renderer {
     }
 
     /// Outputs an image to stdout
-    pub fn render<T>(
+    pub fn render(
         &self,
         camera: &Camera,
-        world: &HittableList<T>,
+        world: &HittableList,
         samples_per_pixel: u32,
         max_depth: u32,
-    ) -> std::io::Result<()>
-    where
-        T: Hittable,
-    {
+    ) -> std::io::Result<()> {
         let stdout = io::stdout();
         let mut buf_writer = io::BufWriter::new(stdout);
 

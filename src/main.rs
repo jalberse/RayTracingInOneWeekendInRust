@@ -44,7 +44,7 @@ fn main() {
         .unwrap();
 }
 
-fn random_scene() -> HittableList<Sphere> {
+fn random_scene() -> HittableList {
     let mut world = HittableList::new();
 
     let material_ground = Material::Lambertian(Lambertian::new(dvec3(0.5, 0.5, 0.5)));

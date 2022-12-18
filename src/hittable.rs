@@ -35,26 +35,20 @@ pub trait Hittable {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
 }
 
-pub struct HittableList<T>
-where
-    T: Hittable,
-{
-    objects: Vec<Box<T>>,
+pub struct HittableList {
+    objects: Vec<Box<dyn Hittable>>,
 }
 
-impl<T> HittableList<T>
-where
-    T: Hittable,
-{
+impl HittableList {
     #[allow(dead_code)]
-    pub fn new() -> HittableList<T> {
+    pub fn new() -> HittableList {
         HittableList {
             objects: Vec::new(),
         }
     }
 
     #[allow(dead_code)]
-    pub fn add(&mut self, object: Box<T>) {
+    pub fn add(&mut self, object: Box<dyn Hittable>) {
         self.objects.push(object);
     }
 
