@@ -33,7 +33,7 @@ fn main() {
         0.1,
         10.0,
     );
-    let renderer = Renderer::from_aspect_ratio(1920, 16.0 / 9.0);
+    let renderer = Renderer::from_aspect_ratio(1200, aspect_ratio);
 
     let world = random_scene();
 

@@ -21,10 +21,10 @@ impl Renderer {
         }
     }
 
-    pub fn from_aspect_ratio(image_width: u32, aspect_ratio: f32) -> Renderer {
+    pub fn from_aspect_ratio(image_width: u32, aspect_ratio: f64) -> Renderer {
         Renderer {
             image_width,
-            image_height: (image_width as f32 / aspect_ratio) as u32,
+            image_height: (image_width as f64 / aspect_ratio) as u32,
         }
     }
 
