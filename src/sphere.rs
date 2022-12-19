@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use glam::DVec3;
 
 use crate::{
@@ -9,11 +11,11 @@ use crate::{
 pub struct Sphere {
     pub center: DVec3,
     pub radius: f64,
-    pub material: Material,
+    pub material: Rc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: DVec3, radius: f64, material: Material) -> Sphere {
+    pub fn new(center: DVec3, radius: f64, material: Rc<dyn Material>) -> Sphere {
         Sphere {
             center,
             radius,
@@ -44,6 +46,6 @@ impl Hittable for Sphere {
         let t = root;
         let point = ray.at(root);
         let normal = (point - self.center) / self.radius;
-        Some(HitRecord::new(&ray, normal, t, self.material))
+        Some(HitRecord::new(&ray, normal, t, self.material.clone()))
     }
 }

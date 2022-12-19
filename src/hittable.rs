@@ -1,4 +1,4 @@
-use std::ops::Neg;
+use std::{ops::Neg, rc::Rc};
 
 use glam::DVec3;
 
@@ -9,11 +9,11 @@ pub struct HitRecord {
     pub normal: DVec3,
     pub t: f64,
     pub front_face: bool,
-    pub material: Material,
+    pub material: Rc<dyn Material>,
 }
 
 impl HitRecord {
-    pub fn new(ray: &Ray, outward_normal: DVec3, t: f64, material: Material) -> HitRecord {
+    pub fn new(ray: &Ray, outward_normal: DVec3, t: f64, material: Rc<dyn Material>) -> HitRecord {
         let point = ray.at(t);
         let front_face = ray.direction.dot(outward_normal).is_sign_negative();
         let normal = if front_face {
