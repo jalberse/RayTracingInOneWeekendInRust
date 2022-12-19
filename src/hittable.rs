@@ -50,14 +50,12 @@ pub struct HittableList {
 }
 
 impl HittableList {
-    #[allow(dead_code)]
     pub fn new() -> HittableList {
         HittableList {
             objects: Vec::new(),
         }
     }
 
-    #[allow(dead_code)]
     pub fn add(&mut self, object: Box<dyn Hittable>) {
         self.objects.push(object);
     }
