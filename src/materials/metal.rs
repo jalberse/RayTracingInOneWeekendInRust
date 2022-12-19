@@ -3,7 +3,7 @@ use glam::DVec3;
 use crate::{hittable::HitRecord, ray::Ray};
 
 use super::{
-    material::{ScatterRecord, Scatterable},
+    material::{Material, ScatterRecord},
     utils,
 };
 
@@ -22,7 +22,7 @@ impl Metal {
     }
 }
 
-impl Scatterable for Metal {
+impl Material for Metal {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<ScatterRecord> {
         let reflected = utils::reflect(ray.direction.normalize(), hit_record.normal);
         let scattered = Ray::new(

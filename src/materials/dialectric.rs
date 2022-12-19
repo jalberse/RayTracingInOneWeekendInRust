@@ -6,7 +6,7 @@ use rand::random;
 use crate::{hittable::HitRecord, ray::Ray};
 
 use super::{
-    material::{ScatterRecord, Scatterable},
+    material::{Material, ScatterRecord},
     utils,
 };
 
@@ -29,7 +29,7 @@ impl Dialectric {
     }
 }
 
-impl Scatterable for Dialectric {
+impl Material for Dialectric {
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<ScatterRecord> {
         let attenuation = dvec3(1.0, 1.0, 1.0);
         let refraction_ratio = if hit_record.front_face {

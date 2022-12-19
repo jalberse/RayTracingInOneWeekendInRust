@@ -6,6 +6,8 @@ mod renderer;
 mod sphere;
 mod utils;
 
+use std::rc::Rc;
+
 use camera::Camera;
 use glam::{dvec3, DVec3};
 use hittable::HittableList;
@@ -47,7 +49,7 @@ fn main() {
 fn random_scene() -> HittableList {
     let mut world = HittableList::new();
 
-    let material_ground = Material::Lambertian(Lambertian::new(dvec3(0.5, 0.5, 0.5)));
+    let material_ground = Rc::new(Lambertian::new(dvec3(0.5, 0.5, 0.5)));
     world.add(Box::new(Sphere::new(
         DVec3::new(0.0, -1000.0, 0.0),
         1000.0,
@@ -64,15 +66,15 @@ fn random_scene() -> HittableList {
             );
 
             if (center - dvec3(4.0, 0.2, 0.0)).length() > 0.9 {
-                let material = if choose_mat < 0.8 {
+                let material: Rc<dyn Material> = if choose_mat < 0.8 {
                     let albedo = random_color() * random_color();
-                    Material::Lambertian(Lambertian::new(albedo))
+                    Rc::new(Lambertian::new(albedo))
                 } else if choose_mat < 0.95 {
                     let albedo = random_color_range(0.5, 1.0);
                     let fuzz = random::<f64>() * 0.5;
-                    Material::Metal(Metal::new(albedo, fuzz))
+                    Rc::new(Metal::new(albedo, fuzz))
                 } else {
-                    Material::Dialectric(Dialectric::new(1.5))
+                    Rc::new(Dialectric::new(1.5))
                 };
                 world.add(Box::new(Sphere::new(center, 0.2, material)));
             }
@@ -80,21 +82,21 @@ fn random_scene() -> HittableList {
     }
 
     let large_sphere_radius = 1.0;
-    let glass_material = Material::Dialectric(Dialectric::new(1.5));
+    let glass_material = Rc::new(Dialectric::new(1.5));
     world.add(Box::new(Sphere::new(
         dvec3(0.0, 1.0, 0.0),
         large_sphere_radius,
         glass_material,
     )));
 
-    let diffuse_material = Material::Lambertian(Lambertian::new(dvec3(0.4, 0.2, 0.1)));
+    let diffuse_material = Rc::new(Lambertian::new(dvec3(0.4, 0.2, 0.1)));
     world.add(Box::new(Sphere::new(
         dvec3(-4.0, 1.0, 0.0),
         large_sphere_radius,
         diffuse_material,
     )));
 
-    let metal_material = Material::Metal(Metal::new(dvec3(0.7, 0.6, 0.5), 0.0));
+    let metal_material = Rc::new(Metal::new(dvec3(0.7, 0.6, 0.5), 0.0));
     world.add(Box::new(Sphere::new(
         dvec3(4.0, 1.0, 0.0),
         large_sphere_radius,
