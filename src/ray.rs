@@ -1,6 +1,6 @@
 use glam::{dvec3, DVec3};
 
-use crate::hittable::HittableList;
+use crate::hittable::{Hittable, HittableList};
 
 pub struct Ray {
     pub origin: DVec3,

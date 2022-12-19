@@ -59,8 +59,10 @@ impl HittableList {
     pub fn add(&mut self, object: Box<dyn Hittable>) {
         self.objects.push(object);
     }
+}
 
-    pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+impl Hittable for HittableList {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         self.objects
             .iter()
             .fold(None, |closest_yet, object| -> Option<HitRecord> {
@@ -75,5 +77,26 @@ impl HittableList {
                     closest_yet
                 }
             })
+    }
+
+    /// Returns the bounding box encompassing all objects in the HittableList.
+    /// Returns None if any object in the list does not have a bounding box (because
+    /// it is e.g. an infinite plane)
+    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb> {
+        if self.objects.is_empty() {
+            return None;
+        }
+
+        let mut output_box_maybe: Option<Aabb> = None;
+        for object in self.objects.iter() {
+            if let Some(object_bb) = object.bounding_box(time_0, time_1) {
+                // Extend the list's bounding box to include this object
+                output_box_maybe = Aabb::union(&output_box_maybe, &Some(object_bb));
+            } else {
+                // If any object can't be bound, the list can't be bound
+                return None;
+            }
+        }
+        output_box_maybe
     }
 }
