@@ -1,11 +1,13 @@
 use std::io::Write;
 use std::io::{self, BufWriter};
 
-use glam::{dvec3, DVec3};
+use palette::Pixel;
+use palette::Srgb;
 use rand::random;
 
 use crate::camera::Camera;
 use crate::hittable::HittableList;
+use crate::utils::srgb_from_dvec3;
 
 pub struct Renderer {
     image_width: u32,
@@ -52,18 +54,20 @@ impl Renderer {
             write!(stderr_buf_writer, "\rScanlines remaining: {:04}", j)?;
             stderr_buf_writer.flush().unwrap();
             for i in 0..self.image_width {
-                let color: DVec3 = {
-                    let mut color_accumulator = dvec3(0.0, 0.0, 0.0);
+                let color: Srgb = {
+                    let mut color_accumulator = Srgb::new(0.0, 0.0, 0.0).into_linear();
                     for _ in 0..samples_per_pixel {
                         let u = (i as f64 + random::<f64>()) / (self.image_width - 1) as f64;
                         let v = (j as f64 + random::<f64>()) / (self.image_height - 1) as f64;
                         let ray = camera.get_ray(u, v);
 
-                        color_accumulator += ray.ray_color(&world, max_depth);
+                        color_accumulator +=
+                            srgb_from_dvec3(ray.ray_color(&world, max_depth)).into_linear();
                     }
-                    color_accumulator.into()
+                    color_accumulator = color_accumulator / samples_per_pixel as f32;
+                    Srgb::from_linear(color_accumulator)
                 };
-                Self::write_color(&mut buf_writer, &color, samples_per_pixel).unwrap();
+                Self::write_color(&mut buf_writer, &color).unwrap();
             }
         }
 
@@ -75,25 +79,13 @@ impl Renderer {
         Ok(())
     }
 
-    fn write_color<T>(
-        buf_writer: &mut BufWriter<T>,
-        color: &DVec3,
-        samples_per_pixel: u32,
-    ) -> std::io::Result<()>
+    fn write_color<T>(buf_writer: &mut BufWriter<T>, color: &Srgb) -> std::io::Result<()>
     where
         T: std::io::Write,
     {
-        // Sqrt is taken for gamma correction
-        let scale = 1.0 / samples_per_pixel as f64;
-        let r = f64::clamp(f64::sqrt(color.x * scale), 0.0, 0.999);
-        let g = f64::clamp(f64::sqrt(color.y * scale), 0.0, 0.999);
-        let b = f64::clamp(f64::sqrt(color.z * scale), 0.0, 0.999);
+        let raw: [u8; 3] = Srgb::into_raw(color.into_format());
 
-        let ir = (r * 256.0) as u32;
-        let ig = (g * 256.0) as u32;
-        let ib = (b * 256.0) as u32;
-
-        write!(buf_writer, "{} {} {}\n", ir, ig, ib)?;
+        write!(buf_writer, "{} {} {}\n", raw[0], raw[1], raw[2])?;
 
         Ok(())
     }
