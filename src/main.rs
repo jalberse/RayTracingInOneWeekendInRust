@@ -14,6 +14,7 @@ use glam::{dvec3, DVec3};
 
 use rand::random;
 use std::rc::Rc;
+use std::time::Instant;
 
 fn main() {
     let aspect_ratio = 3.0 / 2.0;
@@ -30,6 +31,8 @@ fn main() {
     );
     let renderer = Renderer::from_aspect_ratio(1200, aspect_ratio);
 
+    let start = Instant::now();
+
     let world = random_scene();
 
     let samples_per_pixel = 500;
@@ -37,6 +40,9 @@ fn main() {
     renderer
         .render(&camera, &world, samples_per_pixel, max_depth)
         .unwrap();
+
+    let duration = start.elapsed();
+    eprintln!("Render time: {:?}", duration);
 }
 
 fn random_scene() -> HittableList {
