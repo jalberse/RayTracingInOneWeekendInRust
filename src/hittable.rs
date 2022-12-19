@@ -2,7 +2,7 @@ use std::{ops::Neg, rc::Rc};
 
 use glam::DVec3;
 
-use crate::{materials::material::Material, ray::Ray};
+use crate::{aabb::Aabb, materials::material::Material, ray::Ray};
 
 pub struct HitRecord {
     pub point: DVec3,
@@ -33,6 +33,16 @@ impl HitRecord {
 
 pub trait Hittable {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+
+    /// Returns the bounding box of the hittable object. If the object has no bounding box
+    /// (because it is an infinite plane, for example), None is returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `time_0`, `time_1` - If the object moves, the bounding box will encompass its
+    /// full range of motion between `time_0` and `time_1`. If the object does not move,
+    /// thes have no effect on the bounding box.
+    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb>;
 }
 
 pub struct HittableList {
