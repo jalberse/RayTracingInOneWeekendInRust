@@ -1,26 +1,19 @@
-mod camera;
-mod hittable;
-mod materials;
-mod ray;
-mod renderer;
-mod sphere;
-mod utils;
-
-use std::rc::Rc;
-
-use camera::Camera;
-use glam::{dvec3, DVec3};
-use hittable::HittableList;
-use materials::{
+use shimmer::camera::Camera;
+use shimmer::hittable::HittableList;
+use shimmer::materials::{
     dialectric::Dialectric,
     lambertian::Lambertian,
     material::Material,
     metal::Metal,
     utils::{random_color, random_color_range},
 };
+use shimmer::renderer::Renderer;
+use shimmer::sphere::Sphere;
+
+use glam::{dvec3, DVec3};
+
 use rand::random;
-use renderer::Renderer;
-use sphere::Sphere;
+use std::rc::Rc;
 
 fn main() {
     let aspect_ratio = 3.0 / 2.0;
