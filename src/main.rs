@@ -37,7 +37,7 @@ fn main() {
 
     let start = Instant::now();
 
-    let world = random_spheres_moving();
+    let world = random_spheres();
 
     let samples_per_pixel = 500;
     let max_depth = 50;
@@ -53,7 +53,7 @@ fn main() {
 fn random_spheres() -> HittableList {
     let mut world = HittableList::new();
 
-    let material_ground = Rc::new(Lambertian::new(dvec3(0.5, 0.5, 0.5)));
+    let material_ground = Rc::new(Lambertian::from_color(dvec3(0.5, 0.5, 0.5)));
     world.add(Rc::new(Sphere::new(
         DVec3::new(0.0, -1000.0, 0.0),
         1000.0,
@@ -72,7 +72,7 @@ fn random_spheres() -> HittableList {
             if (center - dvec3(4.0, 0.2, 0.0)).length() > 0.9 {
                 let material: Rc<dyn Material> = if choose_mat < 0.8 {
                     let albedo = random_color() * random_color();
-                    Rc::new(Lambertian::new(albedo))
+                    Rc::new(Lambertian::from_color(albedo))
                 } else if choose_mat < 0.95 {
                     let albedo = random_color_range(0.5, 1.0);
                     let fuzz = random::<f64>() * 0.5;
@@ -93,7 +93,7 @@ fn random_spheres() -> HittableList {
         glass_material,
     )));
 
-    let diffuse_material = Rc::new(Lambertian::new(dvec3(0.4, 0.2, 0.1)));
+    let diffuse_material = Rc::new(Lambertian::from_color(dvec3(0.4, 0.2, 0.1)));
     world.add(Rc::new(Sphere::new(
         dvec3(-4.0, 1.0, 0.0),
         large_sphere_radius,
@@ -117,7 +117,7 @@ fn random_spheres() -> HittableList {
 fn random_spheres_moving() -> HittableList {
     let mut world = HittableList::new();
 
-    let material_ground = Rc::new(Lambertian::new(dvec3(0.5, 0.5, 0.5)));
+    let material_ground = Rc::new(Lambertian::from_color(dvec3(0.5, 0.5, 0.5)));
     world.add(Rc::new(Sphere::new(
         DVec3::new(0.0, -1000.0, 0.0),
         1000.0,
@@ -136,7 +136,7 @@ fn random_spheres_moving() -> HittableList {
             if (center - dvec3(4.0, 0.2, 0.0)).length() > 0.9 {
                 let material: Rc<dyn Material> = if choose_mat < 0.8 {
                     let albedo = random_color() * random_color();
-                    Rc::new(Lambertian::new(albedo))
+                    Rc::new(Lambertian::from_color(albedo))
                 } else if choose_mat < 0.95 {
                     let albedo = random_color_range(0.5, 1.0);
                     let fuzz = random::<f64>() * 0.5;
@@ -160,7 +160,7 @@ fn random_spheres_moving() -> HittableList {
         glass_material,
     )));
 
-    let diffuse_material = Rc::new(Lambertian::new(dvec3(0.4, 0.2, 0.1)));
+    let diffuse_material = Rc::new(Lambertian::from_color(dvec3(0.4, 0.2, 0.1)));
     world.add(Rc::new(Sphere::new(
         dvec3(-4.0, 1.0, 0.0),
         large_sphere_radius,

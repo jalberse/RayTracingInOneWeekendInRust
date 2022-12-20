@@ -8,12 +8,23 @@ pub struct HitRecord {
     pub point: DVec3,
     pub normal: DVec3,
     pub t: f64,
+    /// Texture u coordiante
+    pub u: f64,
+    /// Texture v coordinate
+    pub v: f64,
     pub front_face: bool,
     pub material: Rc<dyn Material>,
 }
 
 impl HitRecord {
-    pub fn new(ray: &Ray, outward_normal: DVec3, t: f64, material: Rc<dyn Material>) -> HitRecord {
+    pub fn new(
+        ray: &Ray,
+        outward_normal: DVec3,
+        t: f64,
+        u: f64,
+        v: f64,
+        material: Rc<dyn Material>,
+    ) -> HitRecord {
         let point = ray.at(t);
         let front_face = ray.direction.dot(outward_normal).is_sign_negative();
         let normal = if front_face {
@@ -25,6 +36,8 @@ impl HitRecord {
             point,
             normal,
             t,
+            u,
+            v,
             front_face,
             material,
         }
@@ -41,7 +54,7 @@ pub trait Hittable {
     ///
     /// * `time_0`, `time_1` - If the object moves, the bounding box will encompass its
     /// full range of motion between `time_0` and `time_1`. If the object does not move,
-    /// thes have no effect on the bounding box.
+    /// these values have no effect on the bounding box.
     fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb>;
 }
 
