@@ -1,5 +1,6 @@
 use shimmer::bvh::Bvh;
 use shimmer::camera::Camera;
+use shimmer::geometry::moving_sphere::MovingSphere;
 use shimmer::geometry::sphere::Sphere;
 use shimmer::hittable::HittableList;
 use shimmer::materials::{
@@ -30,13 +31,13 @@ fn main() {
         0.1,
         10.0,
         0.0,
-        0.0,
+        1.0,
     );
-    let renderer = Renderer::from_aspect_ratio(1200, aspect_ratio);
+    let renderer = Renderer::from_aspect_ratio(1920, aspect_ratio);
 
     let start = Instant::now();
 
-    let world = random_scene();
+    let world = random_spheres_moving();
 
     let samples_per_pixel = 500;
     let max_depth = 50;
@@ -48,7 +49,8 @@ fn main() {
     eprintln!("Render time: {:?}", duration);
 }
 
-fn random_scene() -> HittableList {
+#[allow(dead_code)]
+fn random_spheres() -> HittableList {
     let mut world = HittableList::new();
 
     let material_ground = Rc::new(Lambertian::new(dvec3(0.5, 0.5, 0.5)));
@@ -79,6 +81,73 @@ fn random_scene() -> HittableList {
                     Rc::new(Dialectric::new(1.5))
                 };
                 world.add(Rc::new(Sphere::new(center, 0.2, material)));
+            }
+        }
+    }
+
+    let large_sphere_radius = 1.0;
+    let glass_material = Rc::new(Dialectric::new(1.5));
+    world.add(Rc::new(Sphere::new(
+        dvec3(0.0, 1.0, 0.0),
+        large_sphere_radius,
+        glass_material,
+    )));
+
+    let diffuse_material = Rc::new(Lambertian::new(dvec3(0.4, 0.2, 0.1)));
+    world.add(Rc::new(Sphere::new(
+        dvec3(-4.0, 1.0, 0.0),
+        large_sphere_radius,
+        diffuse_material,
+    )));
+
+    let metal_material = Rc::new(Metal::new(dvec3(0.7, 0.6, 0.5), 0.0));
+    world.add(Rc::new(Sphere::new(
+        dvec3(4.0, 1.0, 0.0),
+        large_sphere_radius,
+        metal_material,
+    )));
+
+    let bvh = Rc::new(Bvh::new(world, 0.0, 1.0));
+    let mut world = HittableList::new();
+    world.add(bvh);
+    world
+}
+
+#[allow(dead_code)]
+fn random_spheres_moving() -> HittableList {
+    let mut world = HittableList::new();
+
+    let material_ground = Rc::new(Lambertian::new(dvec3(0.5, 0.5, 0.5)));
+    world.add(Rc::new(Sphere::new(
+        DVec3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        material_ground,
+    )));
+
+    for a in -11..11 {
+        for b in -11..11 {
+            let choose_mat = random::<f32>();
+            let center = dvec3(
+                a as f64 + 0.9 * random::<f64>(),
+                0.2,
+                b as f64 + 0.9 * random::<f64>(),
+            );
+
+            if (center - dvec3(4.0, 0.2, 0.0)).length() > 0.9 {
+                let material: Rc<dyn Material> = if choose_mat < 0.8 {
+                    let albedo = random_color() * random_color();
+                    Rc::new(Lambertian::new(albedo))
+                } else if choose_mat < 0.95 {
+                    let albedo = random_color_range(0.5, 1.0);
+                    let fuzz = random::<f64>() * 0.5;
+                    Rc::new(Metal::new(albedo, fuzz))
+                } else {
+                    Rc::new(Dialectric::new(1.5))
+                };
+                let center_end = center + dvec3(0.0, random::<f64>() * 0.5, 0.0);
+                world.add(Rc::new(MovingSphere::new(
+                    center, center_end, 0.0, 1.0, 0.2, material,
+                )));
             }
         }
     }
