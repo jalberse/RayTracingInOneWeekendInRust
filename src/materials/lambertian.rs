@@ -1,20 +1,33 @@
+use std::rc::Rc;
+
 use glam::DVec3;
 
-use crate::{hittable::HitRecord, ray::Ray, utils};
+use crate::{
+    hittable::HitRecord,
+    ray::Ray,
+    textures::{solid_color::SolidColor, texture::Texture},
+    utils,
+};
 
 use super::{
     material::{Material, ScatterRecord},
     utils::random_unit_vector,
 };
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Lambertian {
-    albedo: DVec3,
+    albedo: Rc<dyn Texture>,
 }
 
 impl Lambertian {
-    pub fn new(albedo: DVec3) -> Lambertian {
+    pub fn new(albedo: Rc<dyn Texture>) -> Lambertian {
         Lambertian { albedo }
+    }
+
+    pub fn from_color(albedo: DVec3) -> Lambertian {
+        Lambertian {
+            albedo: Rc::new(SolidColor::new(albedo)),
+        }
     }
 }
 
@@ -29,7 +42,9 @@ impl Material for Lambertian {
         };
         let scattered = Ray::new(hit_record.point, scatter_direction, ray.time);
 
-        let attenuation = self.albedo;
+        let attenuation = self
+            .albedo
+            .value(hit_record.u, hit_record.v, &hit_record.point);
         Some(ScatterRecord {
             ray: scattered,
             attenuation,

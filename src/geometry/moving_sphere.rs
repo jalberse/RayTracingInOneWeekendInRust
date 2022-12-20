@@ -8,6 +8,8 @@ use crate::{
     materials::material::Material,
 };
 
+use super::sphere::Sphere;
+
 /// A sphere which moves in a linear fashion from `center_start` at `time_start` to
 /// `center_end` at `time_end`. Movement continues outside those those times as well;
 /// these fields just define the velocity and position of the sphere via those two points in time.
@@ -73,7 +75,8 @@ impl Hittable for MovingSphere {
         let t = root;
         let point = ray.at(root);
         let normal = (point - self.center(ray.time)) / self.radius;
-        Some(HitRecord::new(&ray, normal, t, self.material.clone()))
+        let (u, v) = Sphere::get_uv(&normal);
+        Some(HitRecord::new(&ray, normal, t, u, v, self.material.clone()))
     }
 
     fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb> {
