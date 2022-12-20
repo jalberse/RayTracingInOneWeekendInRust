@@ -29,6 +29,8 @@ fn main() {
         aspect_ratio,
         0.1,
         10.0,
+        0.0,
+        0.0,
     );
     let renderer = Renderer::from_aspect_ratio(1200, aspect_ratio);
 
