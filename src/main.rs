@@ -33,7 +33,7 @@ fn main() {
         0.0,
         1.0,
     );
-    let renderer = Renderer::from_aspect_ratio(1920, aspect_ratio);
+    let renderer = Renderer::from_aspect_ratio(1080, aspect_ratio);
 
     let start = Instant::now();
 
