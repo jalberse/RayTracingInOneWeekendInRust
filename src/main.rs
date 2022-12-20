@@ -1,5 +1,6 @@
 use shimmer::bvh::Bvh;
 use shimmer::camera::Camera;
+use shimmer::geometry::sphere::Sphere;
 use shimmer::hittable::HittableList;
 use shimmer::materials::{
     dialectric::Dialectric,
@@ -9,7 +10,6 @@ use shimmer::materials::{
     utils::{random_color, random_color_range},
 };
 use shimmer::renderer::Renderer;
-use shimmer::sphere::Sphere;
 
 use glam::{dvec3, DVec3};
 
