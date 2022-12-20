@@ -2,7 +2,7 @@ use std::{ops::Neg, rc::Rc};
 
 use glam::DVec3;
 
-use crate::{materials::material::Material, ray::Ray};
+use crate::{aabb::Aabb, materials::material::Material, ray::Ray};
 
 pub struct HitRecord {
     pub point: DVec3,
@@ -33,26 +33,36 @@ impl HitRecord {
 
 pub trait Hittable {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+
+    /// Returns the bounding box of the hittable object. If the object has no bounding box
+    /// (because it is an infinite plane, for example), None is returned.
+    ///
+    /// # Arguments
+    ///
+    /// * `time_0`, `time_1` - If the object moves, the bounding box will encompass its
+    /// full range of motion between `time_0` and `time_1`. If the object does not move,
+    /// thes have no effect on the bounding box.
+    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb>;
 }
 
 pub struct HittableList {
-    objects: Vec<Box<dyn Hittable>>,
+    pub objects: Vec<Rc<dyn Hittable>>,
 }
 
 impl HittableList {
-    #[allow(dead_code)]
     pub fn new() -> HittableList {
         HittableList {
             objects: Vec::new(),
         }
     }
 
-    #[allow(dead_code)]
-    pub fn add(&mut self, object: Box<dyn Hittable>) {
+    pub fn add(&mut self, object: Rc<dyn Hittable>) {
         self.objects.push(object);
     }
+}
 
-    pub fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+impl Hittable for HittableList {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         self.objects
             .iter()
             .fold(None, |closest_yet, object| -> Option<HitRecord> {
@@ -67,5 +77,26 @@ impl HittableList {
                     closest_yet
                 }
             })
+    }
+
+    /// Returns the bounding box encompassing all objects in the HittableList.
+    /// Returns None if any object in the list does not have a bounding box (because
+    /// it is e.g. an infinite plane)
+    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb> {
+        if self.objects.is_empty() {
+            return None;
+        }
+
+        let mut output_box_maybe: Option<Aabb> = None;
+        for object in self.objects.iter() {
+            if let Some(object_bb) = object.bounding_box(time_0, time_1) {
+                // Extend the list's bounding box to include this object
+                output_box_maybe = Aabb::union(&output_box_maybe, &Some(object_bb));
+            } else {
+                // If any object can't be bound, the list can't be bound
+                return None;
+            }
+        }
+        output_box_maybe
     }
 }

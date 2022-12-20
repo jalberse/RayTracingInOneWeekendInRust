@@ -1,8 +1,9 @@
 use std::rc::Rc;
 
-use glam::DVec3;
+use glam::{dvec3, DVec3};
 
 use crate::{
+    aabb::Aabb,
     hittable::{HitRecord, Hittable},
     materials::material::Material,
     ray::Ray,
@@ -47,5 +48,11 @@ impl Hittable for Sphere {
         let point = ray.at(root);
         let normal = (point - self.center) / self.radius;
         Some(HitRecord::new(&ray, normal, t, self.material.clone()))
+    }
+
+    fn bounding_box(&self, _time_0: f64, _time_1: f64) -> Option<Aabb> {
+        let rad = dvec3(self.radius, self.radius, self.radius);
+        let bb = Aabb::new(self.center - rad, self.center + rad);
+        Some(bb)
     }
 }

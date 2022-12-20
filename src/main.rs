@@ -1,3 +1,4 @@
+use shimmer::bvh::Bvh;
 use shimmer::camera::Camera;
 use shimmer::hittable::HittableList;
 use shimmer::materials::{
@@ -14,6 +15,7 @@ use glam::{dvec3, DVec3};
 
 use rand::random;
 use std::rc::Rc;
+use std::time::Instant;
 
 fn main() {
     let aspect_ratio = 3.0 / 2.0;
@@ -30,6 +32,8 @@ fn main() {
     );
     let renderer = Renderer::from_aspect_ratio(1200, aspect_ratio);
 
+    let start = Instant::now();
+
     let world = random_scene();
 
     let samples_per_pixel = 500;
@@ -37,13 +41,16 @@ fn main() {
     renderer
         .render(&camera, &world, samples_per_pixel, max_depth)
         .unwrap();
+
+    let duration = start.elapsed();
+    eprintln!("Render time: {:?}", duration);
 }
 
 fn random_scene() -> HittableList {
     let mut world = HittableList::new();
 
     let material_ground = Rc::new(Lambertian::new(dvec3(0.5, 0.5, 0.5)));
-    world.add(Box::new(Sphere::new(
+    world.add(Rc::new(Sphere::new(
         DVec3::new(0.0, -1000.0, 0.0),
         1000.0,
         material_ground,
@@ -69,32 +76,35 @@ fn random_scene() -> HittableList {
                 } else {
                     Rc::new(Dialectric::new(1.5))
                 };
-                world.add(Box::new(Sphere::new(center, 0.2, material)));
+                world.add(Rc::new(Sphere::new(center, 0.2, material)));
             }
         }
     }
 
     let large_sphere_radius = 1.0;
     let glass_material = Rc::new(Dialectric::new(1.5));
-    world.add(Box::new(Sphere::new(
+    world.add(Rc::new(Sphere::new(
         dvec3(0.0, 1.0, 0.0),
         large_sphere_radius,
         glass_material,
     )));
 
     let diffuse_material = Rc::new(Lambertian::new(dvec3(0.4, 0.2, 0.1)));
-    world.add(Box::new(Sphere::new(
+    world.add(Rc::new(Sphere::new(
         dvec3(-4.0, 1.0, 0.0),
         large_sphere_radius,
         diffuse_material,
     )));
 
     let metal_material = Rc::new(Metal::new(dvec3(0.7, 0.6, 0.5), 0.0));
-    world.add(Box::new(Sphere::new(
+    world.add(Rc::new(Sphere::new(
         dvec3(4.0, 1.0, 0.0),
         large_sphere_radius,
         metal_material,
     )));
 
+    let bvh = Rc::new(Bvh::new(world, 0.0, 1.0));
+    let mut world = HittableList::new();
+    world.add(bvh);
     world
 }
