@@ -12,6 +12,7 @@ name = "shimmer"
 path = "src/main.rs"
 
 [dependencies]
+clap = "4.0.29"
 glam = "0.22.0"
 palette = "0.6.1"
 rand = "0.8.5"
