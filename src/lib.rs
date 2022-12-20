@@ -6,4 +6,5 @@ pub mod hittable;
 pub mod materials;
 mod ray;
 pub mod renderer;
+pub mod textures;
 mod utils;
