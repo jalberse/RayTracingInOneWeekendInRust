@@ -1,6 +1,6 @@
 # Shimmer
 
-![Sample Render](images/spheres_render.png)
+![Sample Render](images/spheres_render_checkered.png)
 
 Shimmer is a CPU-bound ray tracing library.
 
