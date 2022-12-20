@@ -41,28 +41,24 @@ impl Aabb {
     }
 
     pub fn union(box0: &Option<Aabb>, box1: &Option<Aabb>) -> Option<Aabb> {
-        if let Some(bb0) = box0 {
-            if let Some(bb1) = box1 {
+        match (box0, box1) {
+            (None, None) => None,
+            (None, Some(box1)) => Some(box1.clone()),
+            (Some(box0), None) => Some(box0.clone()),
+            (Some(box0), Some(box1)) => {
                 let min = DVec3::new(
-                    f64::min(bb0.min().x, bb1.min().x),
-                    f64::min(bb0.min().y, bb1.min().y),
-                    f64::min(bb0.min().z, bb1.min().z),
+                    f64::min(box0.min().x, box1.min().x),
+                    f64::min(box0.min().y, box1.min().y),
+                    f64::min(box0.min().z, box1.min().z),
                 );
                 let max = DVec3::new(
-                    f64::max(bb0.max().x, bb1.max().x),
-                    f64::max(bb0.max().y, bb1.max().y),
-                    f64::max(bb0.max().z, bb1.max().z),
+                    f64::max(box0.max().x, box1.max().x),
+                    f64::max(box0.max().y, box1.max().y),
+                    f64::max(box0.max().z, box1.max().z),
                 );
-                return Some(Aabb::new(min, max));
-            } else {
-                return box0.clone();
-            }
-        } else {
-            if box1.is_some() {
-                return box1.clone();
+                Some(Aabb::new(min, max))
             }
         }
-        None
     }
 }
 
