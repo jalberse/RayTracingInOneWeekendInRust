@@ -15,6 +15,7 @@ use shimmer::renderer::Renderer;
 use glam::{dvec3, DVec3};
 
 use rand::random;
+use shimmer::textures::checker::Checker;
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -53,7 +54,11 @@ fn main() {
 fn random_spheres() -> HittableList {
     let mut world = HittableList::new();
 
-    let material_ground = Rc::new(Lambertian::from_color(dvec3(0.5, 0.5, 0.5)));
+    let material_ground = Rc::new(Lambertian::new(Rc::new(Checker::from_color(
+        10.0,
+        dvec3(0.2, 0.3, 0.1),
+        dvec3(0.9, 0.9, 0.9),
+    ))));
     world.add(Rc::new(Sphere::new(
         DVec3::new(0.0, -1000.0, 0.0),
         1000.0,
@@ -117,7 +122,11 @@ fn random_spheres() -> HittableList {
 fn random_spheres_moving() -> HittableList {
     let mut world = HittableList::new();
 
-    let material_ground = Rc::new(Lambertian::from_color(dvec3(0.5, 0.5, 0.5)));
+    let material_ground = Rc::new(Lambertian::new(Rc::new(Checker::from_color(
+        10.0,
+        dvec3(0.2, 0.3, 0.1),
+        dvec3(0.9, 0.9, 0.9),
+    ))));
     world.add(Rc::new(Sphere::new(
         DVec3::new(0.0, -1000.0, 0.0),
         1000.0,
