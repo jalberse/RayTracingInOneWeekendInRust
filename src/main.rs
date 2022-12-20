@@ -11,11 +11,11 @@ use shimmer::materials::{
     utils::{random_color, random_color_range},
 };
 use shimmer::renderer::Renderer;
+use shimmer::textures::checker::Checker;
 
 use glam::{dvec3, DVec3};
 
 use rand::random;
-use shimmer::textures::checker::Checker;
 use std::rc::Rc;
 use std::time::Instant;
 
