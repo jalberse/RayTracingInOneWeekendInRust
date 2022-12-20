@@ -6,8 +6,14 @@ Shimmer is a CPU-bound ray tracing library.
 
 # Features
 
-* Extensible Material representation for users to define their own materials via trait implementation.
+* Materials
+  * Lambertians
+  * Dialectrics
+  * Metals
+  * Extensible Material representation for users to define their own materials via trait implementation.
 * BVH (Bounding Volume Hierarchy) implementation for fast ray collisions.
+* Camera
+  * Depth of Field
 
 # Acknowledgements
 
