@@ -73,7 +73,7 @@ mod tests {
     #[test]
     fn hits() {
         let origin = DVec3::ZERO;
-        let ray = Ray::new(origin, DVec3::Z);
+        let ray = Ray::new(origin, DVec3::Z, 0.0);
 
         let min = DVec3::new(-1.0, -1.0, 1.0);
         let max = DVec3::new(1.0, 1.0, 2.0);
@@ -86,7 +86,7 @@ mod tests {
     #[test]
     fn misses() {
         let origin = DVec3::ZERO;
-        let ray = Ray::new(origin, DVec3::Z);
+        let ray = Ray::new(origin, DVec3::Z, 0.0);
 
         let min = DVec3::new(1.0, 1.0, 1.0);
         let max = DVec3::new(2.0, 2.0, 2.0);

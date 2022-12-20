@@ -5,11 +5,17 @@ use crate::hittable::{Hittable, HittableList};
 pub struct Ray {
     pub origin: DVec3,
     pub direction: DVec3,
+    /// The time at which the ray exists
+    pub time: f64,
 }
 
 impl Ray {
-    pub fn new(origin: DVec3, direction: DVec3) -> Ray {
-        Ray { origin, direction }
+    pub fn new(origin: DVec3, direction: DVec3, time: f64) -> Ray {
+        Ray {
+            origin,
+            direction,
+            time,
+        }
     }
 
     pub fn at(&self, t: f64) -> DVec3 {

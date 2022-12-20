@@ -52,7 +52,7 @@ impl Material for Dialectric {
             utils::refract(unit_direction, hit_record.normal, refraction_ratio)
         };
 
-        let scattered = Ray::new(hit_record.point, direction);
+        let scattered = Ray::new(hit_record.point, direction, ray.time);
         Some(ScatterRecord {
             attenuation,
             ray: scattered,
