@@ -11,37 +11,111 @@ use shimmer::materials::{
     utils::{random_color, random_color_range},
 };
 use shimmer::renderer::Renderer;
+use shimmer::textures::checker::Checker;
 
+use clap::{Parser, ValueEnum};
 use glam::{dvec3, DVec3};
 
 use rand::random;
-use shimmer::textures::checker::Checker;
 use std::rc::Rc;
 use std::time::Instant;
 
+#[derive(ValueEnum, Clone)]
+enum Scene {
+    RandomSpheres,
+    RandomMovingSpheres,
+}
+
+#[derive(Parser)]
+#[clap(author, version, about)]
+struct Cli {
+    #[clap(value_enum)]
+    scene: Scene,
+    /// Image width; image height is determined by this value and the aspect ratio.
+    #[arg(short = 'w', long, default_value = "1080")]
+    image_width: u32,
+    #[arg(short, long, num_args = 2, default_values = vec!["16.0", "9.0"])]
+    /// Aspect ratio (horizontal, vertical).
+    aspect_ratio: Vec<f64>,
+    /// Number of ray samples per pixel.
+    #[arg(short, long, default_value = "500")]
+    samples_per_pixel: u32,
+    /// Maximum number of bounces for each ray.
+    #[arg(short, long, default_value = "50")]
+    depth: u32,
+    /// x, y, z
+    /// Origin of the camera.
+    #[arg(long, num_args = 3, default_values = vec!["13.0", "2.0", "3.0"])]
+    cam_look_from: Vec<f64>,
+    /// x, y, z
+    /// Determines direction of camera.
+    #[arg(long, num_args = 3, default_values = vec!["0.0", "0.0", "0.0"])]
+    cam_look_at: Vec<f64>,
+    /// x, y, z
+    /// Determines roll of the camera along the vector from cam_look_from to cam_look_at.
+    /// Useful for dutch angle shots.
+    /// Typically "world up" (0.0, 1.0, 0.0).
+    #[arg(long, num_args = 3, default_values = vec!["0.0", "1.0", "0.0"])]
+    cam_view_up: Vec<f64>,
+    /// Vertical field of view. This also dictates the horizontal FOV according to the aspect ratio.
+    #[arg(long, default_value = "20.0")]
+    cam_vertical_fov: f64,
+    /// Camera aperture; twice the lens radius.
+    #[arg(long, default_value = "0.1")]
+    cam_aperture: f64,
+    /// Distance to the focal plane from the camera.
+    #[arg(long, default_value = "10.0")]
+    cam_focus_dist: f64,
+    /// Camera shutter open time.
+    #[arg(long, default_value = "0.0")]
+    cam_start_time: f64,
+    /// Camera shutter close time.
+    #[arg(long, default_value = "0.0")]
+    cam_end_time: f64,
+}
+
 fn main() {
-    let aspect_ratio = 3.0 / 2.0;
-    let look_from = dvec3(13.0, 2.0, 3.0);
-    let look_at = dvec3(0.0, 0.0, 0.0);
+    let cli = Cli::parse();
+
+    let aspect_ratio = cli.aspect_ratio;
+    let aspect_ratio = aspect_ratio[0] / aspect_ratio[1];
+    let look_from = dvec3(
+        cli.cam_look_from[0],
+        cli.cam_look_from[1],
+        cli.cam_look_from[2],
+    );
+    let look_at = dvec3(cli.cam_look_at[0], cli.cam_look_at[1], cli.cam_look_at[2]);
+    let view_up = dvec3(cli.cam_view_up[0], cli.cam_view_up[1], cli.cam_view_up[2]);
+    let vfov = cli.cam_vertical_fov;
+    let aperture = cli.cam_aperture;
+    let focus_dist = cli.cam_focus_dist;
+    let cam_start_time = cli.cam_start_time;
+    let cam_end_time = cli.cam_end_time;
+
     let camera = Camera::new(
         look_from,
         look_at,
-        dvec3(0.0, 1.0, 0.0),
-        20.0,
+        view_up,
+        vfov,
         aspect_ratio,
-        0.1,
-        10.0,
-        0.0,
-        1.0,
+        aperture,
+        focus_dist,
+        cam_start_time,
+        cam_end_time,
     );
-    let renderer = Renderer::from_aspect_ratio(1080, aspect_ratio);
+
+    let image_width = cli.image_width;
+    let renderer = Renderer::from_aspect_ratio(image_width, aspect_ratio);
 
     let start = Instant::now();
 
-    let world = random_spheres();
+    let world = match cli.scene {
+        Scene::RandomSpheres => random_spheres(),
+        Scene::RandomMovingSpheres => random_moving_spheres(),
+    };
 
-    let samples_per_pixel = 500;
-    let max_depth = 50;
+    let samples_per_pixel = cli.samples_per_pixel;
+    let max_depth = cli.depth;
     renderer
         .render(&camera, &world, samples_per_pixel, max_depth)
         .unwrap();
@@ -50,7 +124,6 @@ fn main() {
     eprintln!("Render time: {:?}", duration);
 }
 
-#[allow(dead_code)]
 fn random_spheres() -> HittableList {
     let mut world = HittableList::new();
 
@@ -118,8 +191,7 @@ fn random_spheres() -> HittableList {
     world
 }
 
-#[allow(dead_code)]
-fn random_spheres_moving() -> HittableList {
+fn random_moving_spheres() -> HittableList {
     let mut world = HittableList::new();
 
     let material_ground = Rc::new(Lambertian::new(Rc::new(Checker::from_color(

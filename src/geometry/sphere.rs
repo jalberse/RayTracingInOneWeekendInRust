@@ -25,11 +25,12 @@ impl Sphere {
     }
 
     /// Returns the `(u, v)` coordinates for a `point` on a unit sphere centered at the origin.
-    /// `u` - returned value [0,1] of angle around the Y axis from X=-1.
-    /// `v` - returned value [0,1] of angle from Y=-1 to Y=+1.
-    /// <1 0 0> yields <0.50 0.50>       <-1  0  0> yields <0.00 0.50>
-    /// <0 1 0> yields <0.50 1.00>       < 0 -1  0> yields <0.50 0.00>
-    /// <0 0 1> yields <0.25 0.50>       < 0  0 -1> yields <0.75 0.50>
+    /// * `u` - returned value \[0,1\] of angle around the Y axis from X=-1.
+    /// * `v` - returned value \[0,1\] of angle from Y=-1 to Y=+1.
+    /// * Examples:
+    ///     * <1 0 0> yields <0.50 0.50>       <-1  0  0> yields <0.00 0.50>
+    ///     * <0 1 0> yields <0.50 1.00>       < 0 -1  0> yields <0.50 0.00>
+    ///     * <0 0 1> yields <0.25 0.50>       < 0  0 -1> yields <0.75 0.50>
     pub fn get_uv(point: &DVec3) -> (f64, f64) {
         let theta = f64::acos(point.neg().y);
         let phi = f64::atan2(point.neg().z, point.x) + PI;
