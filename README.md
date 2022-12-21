@@ -21,6 +21,11 @@ Shimmer is a CPU-bound ray tracing library.
   * Depth of Field
   * Shutter Speed
 
+# Usage
+
+Shimmer is not yet published to crates.io. For use, clone this repository. For more details on how to use this crate, run `cargo doc --open` in the cloned repository.
+
+The shimmer binary provides a command line interface to rendering sample scenes using Shimmer. To install shimmer, while in the cloned repository, use `cargo install --path .`. Then use `shimmer --help` for more informtion. Or, skip installation and run `cargo run -- --help`.
 
 # Sample Renders
 

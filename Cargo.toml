@@ -2,6 +2,8 @@
 name = "shimmer"
 version = "0.1.0"
 edition = "2021"
+authors = ["John Alberse"]
+description = "A CPU-bound ray tracing library"
 
 [lib]
 name = "shimmer"
@@ -12,7 +14,7 @@ name = "shimmer"
 path = "src/main.rs"
 
 [dependencies]
-clap = "4.0.29"
+clap = { version = "4.0.29", features = ["derive", "cargo"] }
 glam = "0.22.0"
 palette = "0.6.1"
 rand = "0.8.5"
