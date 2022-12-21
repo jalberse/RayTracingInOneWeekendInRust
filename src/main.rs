@@ -24,6 +24,7 @@ use std::time::Instant;
 enum Scene {
     RandomSpheres,
     RandomMovingSpheres,
+    TwoSpheres,
 }
 
 #[derive(Parser)]
@@ -112,6 +113,7 @@ fn main() {
     let world = match cli.scene {
         Scene::RandomSpheres => random_spheres(),
         Scene::RandomMovingSpheres => random_moving_spheres(),
+        Scene::TwoSpheres => two_spheres(),
     };
 
     let samples_per_pixel = cli.samples_per_pixel;
@@ -258,5 +260,27 @@ fn random_moving_spheres() -> HittableList {
     let bvh = Rc::new(Bvh::new(world, 0.0, 1.0));
     let mut world = HittableList::new();
     world.add(bvh);
+    world
+}
+
+fn two_spheres() -> HittableList {
+    let mut world = HittableList::new();
+    let checkerboard = Rc::new(Lambertian::new(Rc::new(Checker::from_color(
+        10.0,
+        dvec3(0.2, 0.3, 0.1),
+        dvec3(0.9, 0.9, 0.9),
+    ))));
+
+    world.add(Rc::new(Sphere::new(
+        dvec3(0.0, -10.0, 0.0),
+        10.0,
+        checkerboard.clone(),
+    )));
+    world.add(Rc::new(Sphere::new(
+        dvec3(0.0, 10.0, 0.0),
+        10.0,
+        checkerboard.clone(),
+    )));
+
     world
 }
