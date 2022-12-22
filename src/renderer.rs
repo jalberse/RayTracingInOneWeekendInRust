@@ -37,6 +37,8 @@ impl Renderer {
         world: &HittableList,
         samples_per_pixel: u32,
         max_depth: u32,
+        tile_width: u32,
+        tile_height: u32,
     ) -> std::io::Result<()> {
         let stdout = io::stdout();
         let mut buf_writer = io::BufWriter::new(stdout);
@@ -50,24 +52,26 @@ impl Renderer {
             self.image_width, self.image_height
         )?;
 
-        for j in (0..self.image_height).rev() {
-            write!(stderr_buf_writer, "\rScanlines remaining: {:04}", j)?;
+        let tiles = Tile::tile(self.image_width, self.image_height, tile_width, tile_height);
+        let mut colors = ImageColors::new(self.image_width, self.image_height);
+        let mut tiles_ctr = tiles.len();
+        for tile in tiles {
+            write!(stderr_buf_writer, "\rTiles remaining: {:04}", tiles_ctr)?;
             stderr_buf_writer.flush().unwrap();
-            for i in 0..self.image_width {
-                let color: Srgb = {
-                    let mut color_accumulator = Srgb::new(0.0, 0.0, 0.0).into_linear();
-                    for _ in 0..samples_per_pixel {
-                        let u = (i as f64 + random::<f64>()) / (self.image_width - 1) as f64;
-                        let v = (j as f64 + random::<f64>()) / (self.image_height - 1) as f64;
-                        let ray = camera.get_ray(u, v);
+            tiles_ctr -= 1;
+            for i in 0..tile.width {
+                for j in 0..tile.height {
+                    let pixel_coords = tile.get_pixel_coordinates(i, j);
+                    let color =
+                        self.get_color(&pixel_coords, samples_per_pixel, world, max_depth, camera);
+                    colors.set_color(&pixel_coords, color);
+                }
+            }
+        }
 
-                        color_accumulator +=
-                            srgb_from_dvec3(ray.ray_color(&world, max_depth)).into_linear();
-                    }
-                    color_accumulator = color_accumulator / samples_per_pixel as f32;
-                    Srgb::from_linear(color_accumulator)
-                };
-                Self::write_color(&mut buf_writer, &color).unwrap();
+        for y in (0..self.image_height).rev() {
+            for x in 0..self.image_width {
+                Self::write_color(&mut buf_writer, colors.get_color(x, y)).unwrap();
             }
         }
 
@@ -88,5 +92,238 @@ impl Renderer {
         write!(buf_writer, "{} {} {}\n", raw[0], raw[1], raw[2])?;
 
         Ok(())
+    }
+
+    fn get_color(
+        &self,
+        pixel_coords: &PixelCoordinates,
+        samples_per_pixel: u32,
+        world: &HittableList,
+        max_depth: u32,
+        camera: &Camera,
+    ) -> Srgb {
+        let mut color_accumulator = Srgb::new(0.0, 0.0, 0.0).into_linear();
+        for _ in 0..samples_per_pixel {
+            let u = (pixel_coords.x as f64 + random::<f64>()) / (self.image_width - 1) as f64;
+            let v = (pixel_coords.y as f64 + random::<f64>()) / (self.image_height - 1) as f64;
+            let ray = camera.get_ray(u, v);
+
+            color_accumulator += srgb_from_dvec3(ray.ray_color(&world, max_depth)).into_linear();
+        }
+        color_accumulator = color_accumulator / samples_per_pixel as f32;
+        Srgb::from_linear(color_accumulator)
+    }
+}
+
+/// Stores the color of each pixel in the image.
+struct ImageColors {
+    /// Matrix of colors in the image, flattened row-major.
+    colors: Vec<Srgb>,
+    image_width: u32,
+}
+
+impl ImageColors {
+    pub fn new(image_width: u32, image_height: u32) -> ImageColors {
+        ImageColors {
+            colors: vec![Srgb::new(0.0, 0.0, 0.0); (image_width * image_height) as usize],
+            image_width,
+        }
+    }
+
+    pub fn set_color(&mut self, coords: &PixelCoordinates, color: Srgb) {
+        let idx = self.get_idx(coords.x, coords.y);
+        self.colors[idx] = color;
+    }
+
+    pub fn get_color(&self, x: u32, y: u32) -> &Srgb {
+        &self.colors[self.get_idx(x, y)]
+    }
+
+    fn get_idx(&self, x: u32, y: u32) -> usize {
+        (y * self.image_width + x) as usize
+    }
+}
+
+struct PixelCoordinates {
+    pub x: u32,
+    pub y: u32,
+}
+
+struct Tile {
+    /// Width of the tile, in pixels.
+    width: u32,
+    /// Height of the tile, in pixels.
+    height: u32,
+    /// The first pixel X coordinate of this tile in the full image.
+    x_coord_start: u32,
+    /// The first pixel Y coordinate of this tile in the full image.
+    y_coord_start: u32,
+}
+
+impl Tile {
+    pub fn new(width: u32, height: u32, x_coord_start: u32, y_coord_start: u32) -> Tile {
+        Tile {
+            width,
+            height,
+            x_coord_start,
+            y_coord_start,
+        }
+    }
+
+    /// Returns a list of Tiles covering the image.
+    ///
+    /// The tiles are returned in a flattened Vec in row-major order.
+    /// If the image cannot be perfectly divided by the tile width or height,
+    /// then smaller tiles are created to fill the remainder of the image width or height.
+    /// It's recommended to pick a tiling size that fits into the image resolution well.
+    /// Note that 8x8 is a reasonable tile size and 8 evenly divides common resolution
+    /// sizes like 1920, 1080, 720, etc.
+    ///
+    /// * `image_width` - Width of the image to be tiled, in pixels.
+    /// * `image_height` - Height of the image to be tiles, in pixels.
+    /// * `tile_width` - Width of each tile, in pixels.
+    /// * `tile_height` - Height of each tile, in pixels.
+    pub fn tile(
+        image_width: u32,
+        image_height: u32,
+        tile_width: u32,
+        tile_height: u32,
+    ) -> Vec<Tile> {
+        let num_horizontal_tiles = image_width / tile_width;
+        let remainder_horizontal_pixels = image_width % tile_width;
+        let num_vertical_tiles = image_height / tile_height;
+        let remainder_vertical_pixels = image_height % tile_height;
+
+        let mut tiles = Vec::with_capacity(
+            (num_horizontal_tiles * num_vertical_tiles)
+                .try_into()
+                .unwrap(),
+        );
+
+        for tile_y in 0..num_vertical_tiles {
+            for tile_x in 0..num_horizontal_tiles {
+                tiles.push(Tile::new(
+                    tile_width,
+                    tile_height,
+                    tile_x * tile_width,
+                    tile_y * tile_height,
+                ));
+            }
+            // Add the rightmost row if necessary
+            if remainder_horizontal_pixels > 0 {
+                tiles.push(Tile::new(
+                    remainder_horizontal_pixels,
+                    tile_height,
+                    num_horizontal_tiles * tile_width,
+                    tile_y * tile_height,
+                ));
+            }
+        }
+        // Add the bottom row if necessary
+        if remainder_vertical_pixels > 0 {
+            for tile_x in 0..num_horizontal_tiles {
+                tiles.push(Tile::new(
+                    tile_width,
+                    remainder_vertical_pixels,
+                    tile_x * tile_width,
+                    num_vertical_tiles * tile_height,
+                ));
+            }
+        }
+        // Add the bottom-most, right-most Tile if necessary
+        if remainder_horizontal_pixels > 0 && remainder_vertical_pixels > 0 {
+            tiles.push(Tile::new(
+                remainder_horizontal_pixels,
+                remainder_vertical_pixels,
+                num_horizontal_tiles * tile_width,
+                num_vertical_tiles * tile_height,
+            ));
+        }
+
+        tiles
+    }
+
+    /// Given the `x`, `y` coordinate within this tile, get the corresponding
+    /// pixel coordinate in the full image.
+    pub fn get_pixel_coordinates(&self, x: u32, y: u32) -> PixelCoordinates {
+        assert!(x < self.width);
+        assert!(y < self.height);
+        PixelCoordinates {
+            x: self.x_coord_start + x,
+            y: self.y_coord_start + y,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Tile;
+
+    #[test]
+    fn tile_perfect_tiling() {
+        let image_width = 300;
+        let image_height = 30;
+        let tile_width = 100;
+        let tile_height = 10;
+        let tiles = Tile::tile(image_width, image_height, tile_width, tile_height);
+
+        assert!(tiles.len() == 9);
+
+        assert!(tiles[0].width == tile_width);
+        assert!(tiles[0].height == tile_height);
+        assert!(tiles[0].x_coord_start == 0);
+        assert!(tiles[0].y_coord_start == 0);
+
+        assert!(tiles[1].width == tile_width);
+        assert!(tiles[1].height == tile_height);
+        assert!(tiles[1].x_coord_start == tile_width);
+        assert!(tiles[1].y_coord_start == 0);
+
+        assert!(tiles[3].x_coord_start == 0);
+        assert!(tiles[3].y_coord_start == tile_height);
+
+        assert!(tiles.last().unwrap().width == tile_width);
+        assert!(tiles.last().unwrap().height == tile_height);
+        assert!(tiles.last().unwrap().x_coord_start == 200);
+        assert!(tiles.last().unwrap().y_coord_start == 20);
+    }
+
+    #[test]
+    fn tile_imperfect_tiling() {
+        let image_width = 310;
+        let image_height = 31;
+        let tile_width = 100;
+        let tile_height = 10;
+        let tiles = Tile::tile(image_width, image_height, tile_width, tile_height);
+
+        assert!(tiles.len() == 16);
+
+        assert!(tiles[0].width == tile_width);
+        assert!(tiles[0].height == tile_height);
+        assert!(tiles[0].x_coord_start == 0);
+        assert!(tiles[0].y_coord_start == 0);
+
+        assert!(tiles[4].x_coord_start == 0);
+        assert!(tiles[4].y_coord_start == tile_height);
+        assert!(tiles[4].width == tile_width);
+        assert!(tiles[4].height == tile_height);
+
+        // Top right - Width remainder tile
+        assert!(tiles[3].x_coord_start == 300);
+        assert!(tiles[3].y_coord_start == 0);
+        assert!(tiles[3].width == 10);
+        assert!(tiles[3].height == tile_height);
+
+        // Bottom left - height remainder tile
+        assert!(tiles[12].x_coord_start == 0);
+        assert!(tiles[12].y_coord_start == 30);
+        assert!(tiles[12].width == tile_width);
+        assert!(tiles[12].height == 1);
+
+        // Bottom right remainder tile
+        assert!(tiles[15].x_coord_start == 300);
+        assert!(tiles[15].y_coord_start == 30);
+        assert!(tiles[15].width == 10);
+        assert!(tiles[15].height == 1);
     }
 }

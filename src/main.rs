@@ -46,6 +46,12 @@ struct Cli {
     /// Maximum number of bounces for each ray.
     #[arg(short, long, default_value = "50")]
     depth: u32,
+    /// Width of each render tile, in pixels.
+    #[arg(long, default_value = "8")]
+    tile_width: u32,
+    /// Height of each render tile, in pixels.
+    #[arg(long, default_value = "8")]
+    tile_height: u32,
     /// x, y, z
     /// Origin of the camera.
     #[arg(long, num_args = 3, default_values = vec!["13.0", "2.0", "3.0"])]
@@ -122,7 +128,14 @@ fn main() {
     let samples_per_pixel = cli.samples_per_pixel;
     let max_depth = cli.depth;
     renderer
-        .render(&camera, &world, samples_per_pixel, max_depth)
+        .render(
+            &camera,
+            &world,
+            samples_per_pixel,
+            max_depth,
+            cli.tile_width,
+            cli.tile_height,
+        )
         .unwrap();
 
     let duration = start.elapsed();
