@@ -17,6 +17,7 @@ use clap::{Parser, ValueEnum};
 use glam::{dvec3, DVec3};
 
 use rand::random;
+use shimmer::textures::marble::Marble;
 use std::rc::Rc;
 use std::time::Instant;
 
@@ -25,6 +26,7 @@ enum Scene {
     RandomSpheres,
     RandomMovingSpheres,
     TwoSpheres,
+    Marble,
 }
 
 #[derive(Parser)]
@@ -114,6 +116,7 @@ fn main() {
         Scene::RandomSpheres => random_spheres(),
         Scene::RandomMovingSpheres => random_moving_spheres(),
         Scene::TwoSpheres => two_spheres(),
+        Scene::Marble => two_marble_spheres(),
     };
 
     let samples_per_pixel = cli.samples_per_pixel;
@@ -282,5 +285,22 @@ fn two_spheres() -> HittableList {
         checkerboard.clone(),
     )));
 
+    world
+}
+
+fn two_marble_spheres() -> HittableList {
+    let mut world = HittableList::new();
+
+    let marble_texture = Rc::new(Marble::new(4.0));
+    world.add(Rc::new(Sphere::new(
+        dvec3(0.0, -1000.0, 0.0),
+        1000.0,
+        Rc::new(Lambertian::new(marble_texture.clone())),
+    )));
+    world.add(Rc::new(Sphere::new(
+        dvec3(0.0, 2.0, 0.0),
+        2.0,
+        Rc::new(Lambertian::new(marble_texture)),
+    )));
     world
 }
