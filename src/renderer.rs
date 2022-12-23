@@ -1,10 +1,11 @@
 use std::io;
 use std::io::Write;
 
+use indicatif::ParallelProgressIterator;
 use palette::Pixel;
 use palette::Srgb;
 use rand::random;
-use rayon::prelude::*;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::camera::Camera;
 use crate::hittable::HittableList;
@@ -47,8 +48,11 @@ impl Renderer {
         let tiles = Tile::tile(self.image_width, self.image_height, tile_width, tile_height);
         let mut colors = ImageColors::new(self.image_width, self.image_height);
 
+        write!(stderr_buf_writer, "Rendering tiles...\n")?;
+        stderr_buf_writer.flush().unwrap();
         let rendered_tiles: Vec<RenderedTile> = tiles
             .par_iter()
+            .progress()
             .map(|tile| {
                 let mut tile_colors = ImageColors::new(tile.width, tile.height);
                 for y in 0..tile.height {
