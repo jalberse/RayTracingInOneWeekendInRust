@@ -46,9 +46,6 @@ struct Cli {
     /// Maximum number of bounces for each ray.
     #[arg(short, long, default_value = "50")]
     depth: u32,
-    /// Number of threads to use during rendering.
-    #[arg(long, default_value = "16")]
-    threads: u32,
     /// Width of each render tile, in pixels.
     #[arg(long, default_value = "8")]
     tile_width: usize,
@@ -136,7 +133,6 @@ fn main() {
             &world,
             samples_per_pixel,
             max_depth,
-            cli.threads,
             cli.tile_width,
             cli.tile_height,
         )
