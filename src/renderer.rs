@@ -89,9 +89,4 @@ impl Renderer {
 
         Ok(())
     }
-
-    #[allow(dead_code)]
-    pub fn aspect_ratio(&self) -> f32 {
-        self.image_width as f32 / self.image_height as f32
-    }
 }
