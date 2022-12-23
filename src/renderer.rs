@@ -10,23 +10,23 @@ use crate::hittable::HittableList;
 use crate::utils::srgb_from_dvec3;
 
 pub struct Renderer {
-    image_width: u32,
-    image_height: u32,
+    image_width: usize,
+    image_height: usize,
 }
 
 impl Renderer {
     #[allow(dead_code)]
-    pub fn new(image_width: u32, image_height: u32) -> Renderer {
+    pub fn new(image_width: usize, image_height: usize) -> Renderer {
         Renderer {
             image_width,
             image_height,
         }
     }
 
-    pub fn from_aspect_ratio(image_width: u32, aspect_ratio: f64) -> Renderer {
+    pub fn from_aspect_ratio(image_width: usize, aspect_ratio: f64) -> Renderer {
         Renderer {
             image_width,
-            image_height: (image_width as f64 / aspect_ratio) as u32,
+            image_height: (image_width as f64 / aspect_ratio) as usize,
         }
     }
 
@@ -37,8 +37,8 @@ impl Renderer {
         world: &HittableList,
         samples_per_pixel: u32,
         max_depth: u32,
-        tile_width: u32,
-        tile_height: u32,
+        tile_width: usize,
+        tile_height: usize,
     ) -> std::io::Result<()> {
         let stdout = io::stdout();
         let mut buf_writer = io::BufWriter::new(stdout);
@@ -119,13 +119,13 @@ impl Renderer {
 struct ImageColors {
     /// Matrix of colors in the image, flattened row-major.
     colors: Vec<Srgb>,
-    image_width: u32,
+    image_width: usize,
 }
 
 impl ImageColors {
-    pub fn new(image_width: u32, image_height: u32) -> ImageColors {
+    pub fn new(image_width: usize, image_height: usize) -> ImageColors {
         ImageColors {
-            colors: vec![Srgb::new(0.0, 0.0, 0.0); (image_width * image_height) as usize],
+            colors: vec![Srgb::new(0.0, 0.0, 0.0); image_width * image_height],
             image_width,
         }
     }
@@ -135,33 +135,33 @@ impl ImageColors {
         self.colors[idx] = color;
     }
 
-    pub fn get_color(&self, x: u32, y: u32) -> &Srgb {
+    pub fn get_color(&self, x: usize, y: usize) -> &Srgb {
         &self.colors[self.get_idx(x, y)]
     }
 
-    fn get_idx(&self, x: u32, y: u32) -> usize {
-        (y * self.image_width + x) as usize
+    fn get_idx(&self, x: usize, y: usize) -> usize {
+        y * self.image_width + x
     }
 }
 
 struct PixelCoordinates {
-    pub x: u32,
-    pub y: u32,
+    pub x: usize,
+    pub y: usize,
 }
 
 struct Tile {
     /// Width of the tile, in pixels.
-    width: u32,
+    width: usize,
     /// Height of the tile, in pixels.
-    height: u32,
+    height: usize,
     /// The first pixel X coordinate of this tile in the full image.
-    x_coord_start: u32,
+    x_coord_start: usize,
     /// The first pixel Y coordinate of this tile in the full image.
-    y_coord_start: u32,
+    y_coord_start: usize,
 }
 
 impl Tile {
-    pub fn new(width: u32, height: u32, x_coord_start: u32, y_coord_start: u32) -> Tile {
+    pub fn new(width: usize, height: usize, x_coord_start: usize, y_coord_start: usize) -> Tile {
         Tile {
             width,
             height,
@@ -184,10 +184,10 @@ impl Tile {
     /// * `tile_width` - Width of each tile, in pixels.
     /// * `tile_height` - Height of each tile, in pixels.
     pub fn tile(
-        image_width: u32,
-        image_height: u32,
-        tile_width: u32,
-        tile_height: u32,
+        image_width: usize,
+        image_height: usize,
+        tile_width: usize,
+        tile_height: usize,
     ) -> Vec<Tile> {
         let num_horizontal_tiles = image_width / tile_width;
         let remainder_horizontal_pixels = image_width % tile_width;
@@ -245,7 +245,7 @@ impl Tile {
 
     /// Given the `x`, `y` coordinate within this tile, get the corresponding
     /// pixel coordinate in the full image.
-    pub fn get_pixel_coordinates(&self, x: u32, y: u32) -> PixelCoordinates {
+    pub fn get_pixel_coordinates(&self, x: usize, y: usize) -> PixelCoordinates {
         assert!(x < self.width);
         assert!(y < self.height);
         PixelCoordinates {

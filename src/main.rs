@@ -36,7 +36,7 @@ struct Cli {
     scene: Scene,
     /// Image width; image height is determined by this value and the aspect ratio.
     #[arg(short = 'w', long, default_value = "1080")]
-    image_width: u32,
+    image_width: usize,
     #[arg(short, long, num_args = 2, default_values = vec!["16.0", "9.0"])]
     /// Aspect ratio (horizontal, vertical).
     aspect_ratio: Vec<f64>,
@@ -48,10 +48,10 @@ struct Cli {
     depth: u32,
     /// Width of each render tile, in pixels.
     #[arg(long, default_value = "8")]
-    tile_width: u32,
+    tile_width: usize,
     /// Height of each render tile, in pixels.
     #[arg(long, default_value = "8")]
-    tile_height: u32,
+    tile_height: usize,
     /// x, y, z
     /// Origin of the camera.
     #[arg(long, num_args = 3, default_values = vec!["13.0", "2.0", "3.0"])]
