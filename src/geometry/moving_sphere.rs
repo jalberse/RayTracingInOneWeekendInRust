@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use glam::{dvec3, DVec3};
 
@@ -19,7 +19,7 @@ pub struct MovingSphere {
     time_start: f64,
     time_end: f64,
     radius: f64,
-    pub material: Rc<dyn Material>,
+    pub material: Arc<dyn Material>,
 }
 
 impl MovingSphere {
@@ -29,7 +29,7 @@ impl MovingSphere {
         time_start: f64,
         time_end: f64,
         radius: f64,
-        material: Rc<dyn Material>,
+        material: Arc<dyn Material>,
     ) -> MovingSphere {
         MovingSphere {
             center_start,

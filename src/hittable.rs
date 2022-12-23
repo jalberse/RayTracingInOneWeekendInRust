@@ -1,4 +1,4 @@
-use std::{ops::Neg, rc::Rc};
+use std::{ops::Neg, sync::Arc};
 
 use glam::DVec3;
 
@@ -13,7 +13,7 @@ pub struct HitRecord {
     /// Texture v coordinate
     pub v: f64,
     pub front_face: bool,
-    pub material: Rc<dyn Material>,
+    pub material: Arc<dyn Material>,
 }
 
 impl HitRecord {
@@ -23,7 +23,7 @@ impl HitRecord {
         t: f64,
         u: f64,
         v: f64,
-        material: Rc<dyn Material>,
+        material: Arc<dyn Material>,
     ) -> HitRecord {
         let point = ray.at(t);
         let front_face = ray.direction.dot(outward_normal).is_sign_negative();
@@ -44,7 +44,7 @@ impl HitRecord {
     }
 }
 
-pub trait Hittable {
+pub trait Hittable: Send + Sync {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
 
     /// Returns the bounding box of the hittable object. If the object has no bounding box
@@ -59,7 +59,7 @@ pub trait Hittable {
 }
 
 pub struct HittableList {
-    pub objects: Vec<Rc<dyn Hittable>>,
+    pub objects: Vec<Arc<dyn Hittable>>,
 }
 
 impl HittableList {
@@ -69,7 +69,7 @@ impl HittableList {
         }
     }
 
-    pub fn add(&mut self, object: Rc<dyn Hittable>) {
+    pub fn add(&mut self, object: Arc<dyn Hittable>) {
         self.objects.push(object);
     }
 }

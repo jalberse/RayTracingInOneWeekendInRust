@@ -7,7 +7,7 @@ pub struct ScatterRecord {
     pub ray: Ray,
 }
 
-pub trait Material {
+pub trait Material: Send + Sync {
     /// Returns None if the ray is absorbed and not scattered
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<ScatterRecord>;
 }
