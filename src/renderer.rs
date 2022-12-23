@@ -1,5 +1,5 @@
+use std::io;
 use std::io::Write;
-use std::io::{self, BufWriter};
 
 use palette::Pixel;
 use palette::Srgb;
@@ -40,17 +40,8 @@ impl Renderer {
         tile_width: usize,
         tile_height: usize,
     ) -> std::io::Result<()> {
-        let stdout = io::stdout();
-        let mut buf_writer = io::BufWriter::new(stdout);
-
         let stderr = io::stderr();
         let mut stderr_buf_writer = io::BufWriter::new(stderr);
-
-        write!(
-            buf_writer,
-            "P3\n{} {}\n255\n",
-            self.image_width, self.image_height
-        )?;
 
         let tiles = Tile::tile(self.image_width, self.image_height, tile_width, tile_height);
         let mut colors = ImageColors::new(self.image_width, self.image_height);
@@ -69,27 +60,34 @@ impl Renderer {
             }
         }
 
-        for y in (0..self.image_height).rev() {
-            for x in 0..self.image_width {
-                Self::write_color(&mut buf_writer, colors.get_color(x, y)).unwrap();
-            }
-        }
+        write!(stderr_buf_writer, "\nDone tracing.\n")?;
 
-        write!(stderr_buf_writer, "\nDone.\n")?;
+        write!(stderr_buf_writer, "Writing to file...\n")?;
+        self.write_ppm(&colors).unwrap();
+        write!(stderr_buf_writer, "Done writing to file.\n")?;
 
-        buf_writer.flush().unwrap();
         stderr_buf_writer.flush().unwrap();
-
         Ok(())
     }
 
-    fn write_color<T>(buf_writer: &mut BufWriter<T>, color: &Srgb) -> std::io::Result<()>
-    where
-        T: std::io::Write,
-    {
-        let raw: [u8; 3] = Srgb::into_raw(color.into_format());
+    fn write_ppm(&self, colors: &ImageColors) -> std::io::Result<()> {
+        let stdout = io::stdout();
+        let mut buf_writer = io::BufWriter::new(stdout);
+        write!(
+            buf_writer,
+            "P3\n{} {}\n255\n",
+            self.image_width, self.image_height
+        )?;
 
-        write!(buf_writer, "{} {} {}\n", raw[0], raw[1], raw[2])?;
+        for y in (0..self.image_height).rev() {
+            for x in 0..self.image_width {
+                let color = colors.get_color(x, y);
+                let raw: [u8; 3] = Srgb::into_raw(color.into_format());
+                write!(buf_writer, "{} {} {}\n", raw[0], raw[1], raw[2])?;
+            }
+        }
+
+        buf_writer.flush().unwrap();
 
         Ok(())
     }
