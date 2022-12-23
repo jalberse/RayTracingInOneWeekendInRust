@@ -1,4 +1,4 @@
-use std::{f64::consts::PI, ops::Neg, rc::Rc};
+use std::{f64::consts::PI, ops::Neg, sync::Arc};
 
 use glam::{dvec3, DVec3};
 
@@ -12,11 +12,11 @@ use crate::{
 pub struct Sphere {
     pub center: DVec3,
     pub radius: f64,
-    pub material: Rc<dyn Material>,
+    pub material: Arc<dyn Material>,
 }
 
 impl Sphere {
-    pub fn new(center: DVec3, radius: f64, material: Rc<dyn Material>) -> Sphere {
+    pub fn new(center: DVec3, radius: f64, material: Arc<dyn Material>) -> Sphere {
         Sphere {
             center,
             radius,

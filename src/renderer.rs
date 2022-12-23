@@ -1,6 +1,10 @@
 use std::io;
 use std::io::Write;
+use std::sync::Arc;
 
+use crossbeam::channel;
+use crossbeam::channel::Sender;
+use crossbeam::queue::ArrayQueue;
 use palette::Pixel;
 use palette::Srgb;
 use rand::random;
@@ -37,6 +41,7 @@ impl Renderer {
         world: &HittableList,
         samples_per_pixel: u32,
         max_depth: u32,
+        threads: u32,
         tile_width: usize,
         tile_height: usize,
     ) -> std::io::Result<()> {
@@ -44,21 +49,45 @@ impl Renderer {
         let mut stderr_buf_writer = io::BufWriter::new(stderr);
 
         let tiles = Tile::tile(self.image_width, self.image_height, tile_width, tile_height);
+        let tiles_queue = Arc::new(ArrayQueue::new(tiles.len()));
+        tiles.into_iter().for_each(|tile| {
+            tiles_queue.push(tile).unwrap();
+        });
         let mut colors = ImageColors::new(self.image_width, self.image_height);
-        let mut tiles_ctr = tiles.len();
-        for tile in tiles {
-            write!(stderr_buf_writer, "\rTiles remaining: {:04}", tiles_ctr)?;
-            stderr_buf_writer.flush().unwrap();
-            tiles_ctr -= 1;
-            for i in 0..tile.width {
-                for j in 0..tile.height {
-                    let pixel_coords = tile.get_pixel_coordinates(i, j);
-                    let color =
-                        self.get_color(&pixel_coords, samples_per_pixel, world, max_depth, camera);
-                    colors.set_color(&pixel_coords, color);
+
+        crossbeam::scope(|scope| {
+            let (s, r) = channel::unbounded();
+            for _i in 0..threads {
+                let s = s.clone();
+                let tiles_queue = tiles_queue.clone();
+                scope.spawn(move |_| {
+                    self.render_tile(s, tiles_queue, samples_per_pixel, world, max_depth, camera);
+                });
+            }
+            drop(s);
+
+            for received in r {
+                let tiles_remaining = tiles_queue.len();
+                write!(
+                    stderr_buf_writer,
+                    "\rTiles remaining: {:07}",
+                    tiles_remaining
+                )
+                .unwrap();
+                stderr_buf_writer.flush().unwrap();
+
+                // Update the image with the colors from this tile
+                let tile = &received.tile;
+                for x in 0..tile.width {
+                    for y in 0..tile.height {
+                        let full_image_pixel_coords = tile.get_full_image_pixel_coordinates(x, y);
+                        let color = received.colors.get_color(x, y);
+                        colors.set_color(&full_image_pixel_coords, *color);
+                    }
                 }
             }
-        }
+        })
+        .unwrap();
 
         write!(stderr_buf_writer, "\nDone tracing.\n")?;
 
@@ -111,9 +140,59 @@ impl Renderer {
         color_accumulator = color_accumulator / samples_per_pixel as f32;
         Srgb::from_linear(color_accumulator)
     }
+
+    fn render_tile(
+        &self,
+        sender: Sender<TileRenderMessage>,
+        tiles_queue: Arc<ArrayQueue<Tile>>,
+        samples_per_pixel: u32,
+        world: &HittableList,
+        max_depth: u32,
+        camera: &Camera,
+    ) {
+        loop {
+            let tile = tiles_queue.pop();
+            if let Some(tile) = tile {
+                let mut tile_colors = ImageColors::new(tile.width, tile.height);
+                for y in 0..tile.height {
+                    for x in 0..tile.width {
+                        let pixel_coords = tile.get_full_image_pixel_coordinates(x, y);
+                        let color = self.get_color(
+                            &pixel_coords,
+                            samples_per_pixel,
+                            world,
+                            max_depth,
+                            camera,
+                        );
+                        tile_colors.set_color(&PixelCoordinates::new(x, y), color);
+                    }
+                }
+                sender
+                    .send(TileRenderMessage::new(tile, tile_colors))
+                    .unwrap();
+            } else {
+                return;
+            }
+        }
+    }
 }
 
-/// Stores the color of each pixel in the image.
+/// The information necessary to populate ImageColor with color data
+/// for a single Tile's pixels. Sent from worker threads to the main
+/// thread in Renderer.
+struct TileRenderMessage {
+    tile: Tile,
+    /// The colors for this tile (where this tile is the "Image")
+    colors: ImageColors,
+}
+
+impl TileRenderMessage {
+    pub fn new(tile: Tile, colors: ImageColors) -> TileRenderMessage {
+        TileRenderMessage { tile, colors }
+    }
+}
+
+/// Stores the color of each pixel in an image.
 struct ImageColors {
     /// Matrix of colors in the image, flattened row-major.
     colors: Vec<Srgb>,
@@ -147,6 +226,13 @@ struct PixelCoordinates {
     pub y: usize,
 }
 
+impl PixelCoordinates {
+    pub fn new(x: usize, y: usize) -> PixelCoordinates {
+        PixelCoordinates { x, y }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 struct Tile {
     /// Width of the tile, in pixels.
     width: usize,
@@ -192,11 +278,7 @@ impl Tile {
         let num_vertical_tiles = image_height / tile_height;
         let remainder_vertical_pixels = image_height % tile_height;
 
-        let mut tiles = Vec::with_capacity(
-            (num_horizontal_tiles * num_vertical_tiles)
-                .try_into()
-                .unwrap(),
-        );
+        let mut tiles = Vec::with_capacity(num_horizontal_tiles * num_vertical_tiles);
 
         for tile_y in 0..num_vertical_tiles {
             for tile_x in 0..num_horizontal_tiles {
@@ -243,13 +325,10 @@ impl Tile {
 
     /// Given the `x`, `y` coordinate within this tile, get the corresponding
     /// pixel coordinate in the full image.
-    pub fn get_pixel_coordinates(&self, x: usize, y: usize) -> PixelCoordinates {
+    pub fn get_full_image_pixel_coordinates(&self, x: usize, y: usize) -> PixelCoordinates {
         assert!(x < self.width);
         assert!(y < self.height);
-        PixelCoordinates {
-            x: self.x_coord_start + x,
-            y: self.y_coord_start + y,
-        }
+        PixelCoordinates::new(self.x_coord_start + x, self.y_coord_start + y)
     }
 }
 

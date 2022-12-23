@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use glam::DVec3;
 
@@ -16,17 +16,17 @@ use super::{
 
 #[derive(Clone)]
 pub struct Lambertian {
-    albedo: Rc<dyn Texture>,
+    albedo: Arc<dyn Texture>,
 }
 
 impl Lambertian {
-    pub fn new(albedo: Rc<dyn Texture>) -> Lambertian {
+    pub fn new(albedo: Arc<dyn Texture>) -> Lambertian {
         Lambertian { albedo }
     }
 
     pub fn from_color(albedo: DVec3) -> Lambertian {
         Lambertian {
-            albedo: Rc::new(SolidColor::new(albedo)),
+            albedo: Arc::new(SolidColor::new(albedo)),
         }
     }
 }

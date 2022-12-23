@@ -18,7 +18,7 @@ use glam::{dvec3, DVec3};
 
 use rand::random;
 use shimmer::textures::marble::Marble;
-use std::rc::Rc;
+use std::sync::Arc;
 use std::time::Instant;
 
 #[derive(ValueEnum, Clone)]
@@ -46,6 +46,9 @@ struct Cli {
     /// Maximum number of bounces for each ray.
     #[arg(short, long, default_value = "50")]
     depth: u32,
+    /// Number of threads to use during rendering.
+    #[arg(long, default_value = "16")]
+    threads: u32,
     /// Width of each render tile, in pixels.
     #[arg(long, default_value = "8")]
     tile_width: usize,
@@ -133,6 +136,7 @@ fn main() {
             &world,
             samples_per_pixel,
             max_depth,
+            cli.threads,
             cli.tile_width,
             cli.tile_height,
         )
@@ -145,12 +149,12 @@ fn main() {
 fn random_spheres() -> HittableList {
     let mut world = HittableList::new();
 
-    let material_ground = Rc::new(Lambertian::new(Rc::new(Checker::from_color(
+    let material_ground = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
         10.0,
         dvec3(0.2, 0.3, 0.1),
         dvec3(0.9, 0.9, 0.9),
     ))));
-    world.add(Rc::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         DVec3::new(0.0, -1000.0, 0.0),
         1000.0,
         material_ground,
@@ -166,44 +170,44 @@ fn random_spheres() -> HittableList {
             );
 
             if (center - dvec3(4.0, 0.2, 0.0)).length() > 0.9 {
-                let material: Rc<dyn Material> = if choose_mat < 0.8 {
+                let material: Arc<dyn Material> = if choose_mat < 0.8 {
                     let albedo = random_color() * random_color();
-                    Rc::new(Lambertian::from_color(albedo))
+                    Arc::new(Lambertian::from_color(albedo))
                 } else if choose_mat < 0.95 {
                     let albedo = random_color_range(0.5, 1.0);
                     let fuzz = random::<f64>() * 0.5;
-                    Rc::new(Metal::new(albedo, fuzz))
+                    Arc::new(Metal::new(albedo, fuzz))
                 } else {
-                    Rc::new(Dialectric::new(1.5))
+                    Arc::new(Dialectric::new(1.5))
                 };
-                world.add(Rc::new(Sphere::new(center, 0.2, material)));
+                world.add(Arc::new(Sphere::new(center, 0.2, material)));
             }
         }
     }
 
     let large_sphere_radius = 1.0;
-    let glass_material = Rc::new(Dialectric::new(1.5));
-    world.add(Rc::new(Sphere::new(
+    let glass_material = Arc::new(Dialectric::new(1.5));
+    world.add(Arc::new(Sphere::new(
         dvec3(0.0, 1.0, 0.0),
         large_sphere_radius,
         glass_material,
     )));
 
-    let diffuse_material = Rc::new(Lambertian::from_color(dvec3(0.4, 0.2, 0.1)));
-    world.add(Rc::new(Sphere::new(
+    let diffuse_material = Arc::new(Lambertian::from_color(dvec3(0.4, 0.2, 0.1)));
+    world.add(Arc::new(Sphere::new(
         dvec3(-4.0, 1.0, 0.0),
         large_sphere_radius,
         diffuse_material,
     )));
 
-    let metal_material = Rc::new(Metal::new(dvec3(0.7, 0.6, 0.5), 0.0));
-    world.add(Rc::new(Sphere::new(
+    let metal_material = Arc::new(Metal::new(dvec3(0.7, 0.6, 0.5), 0.0));
+    world.add(Arc::new(Sphere::new(
         dvec3(4.0, 1.0, 0.0),
         large_sphere_radius,
         metal_material,
     )));
 
-    let bvh = Rc::new(Bvh::new(world, 0.0, 1.0));
+    let bvh = Arc::new(Bvh::new(world, 0.0, 1.0));
     let mut world = HittableList::new();
     world.add(bvh);
     world
@@ -212,12 +216,12 @@ fn random_spheres() -> HittableList {
 fn random_moving_spheres() -> HittableList {
     let mut world = HittableList::new();
 
-    let material_ground = Rc::new(Lambertian::new(Rc::new(Checker::from_color(
+    let material_ground = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
         10.0,
         dvec3(0.2, 0.3, 0.1),
         dvec3(0.9, 0.9, 0.9),
     ))));
-    world.add(Rc::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         DVec3::new(0.0, -1000.0, 0.0),
         1000.0,
         material_ground,
@@ -233,18 +237,18 @@ fn random_moving_spheres() -> HittableList {
             );
 
             if (center - dvec3(4.0, 0.2, 0.0)).length() > 0.9 {
-                let material: Rc<dyn Material> = if choose_mat < 0.8 {
+                let material: Arc<dyn Material> = if choose_mat < 0.8 {
                     let albedo = random_color() * random_color();
-                    Rc::new(Lambertian::from_color(albedo))
+                    Arc::new(Lambertian::from_color(albedo))
                 } else if choose_mat < 0.95 {
                     let albedo = random_color_range(0.5, 1.0);
                     let fuzz = random::<f64>() * 0.5;
-                    Rc::new(Metal::new(albedo, fuzz))
+                    Arc::new(Metal::new(albedo, fuzz))
                 } else {
-                    Rc::new(Dialectric::new(1.5))
+                    Arc::new(Dialectric::new(1.5))
                 };
                 let center_end = center + dvec3(0.0, random::<f64>() * 0.5, 0.0);
-                world.add(Rc::new(MovingSphere::new(
+                world.add(Arc::new(MovingSphere::new(
                     center, center_end, 0.0, 1.0, 0.2, material,
                 )));
             }
@@ -252,28 +256,28 @@ fn random_moving_spheres() -> HittableList {
     }
 
     let large_sphere_radius = 1.0;
-    let glass_material = Rc::new(Dialectric::new(1.5));
-    world.add(Rc::new(Sphere::new(
+    let glass_material = Arc::new(Dialectric::new(1.5));
+    world.add(Arc::new(Sphere::new(
         dvec3(0.0, 1.0, 0.0),
         large_sphere_radius,
         glass_material,
     )));
 
-    let diffuse_material = Rc::new(Lambertian::from_color(dvec3(0.4, 0.2, 0.1)));
-    world.add(Rc::new(Sphere::new(
+    let diffuse_material = Arc::new(Lambertian::from_color(dvec3(0.4, 0.2, 0.1)));
+    world.add(Arc::new(Sphere::new(
         dvec3(-4.0, 1.0, 0.0),
         large_sphere_radius,
         diffuse_material,
     )));
 
-    let metal_material = Rc::new(Metal::new(dvec3(0.7, 0.6, 0.5), 0.0));
-    world.add(Rc::new(Sphere::new(
+    let metal_material = Arc::new(Metal::new(dvec3(0.7, 0.6, 0.5), 0.0));
+    world.add(Arc::new(Sphere::new(
         dvec3(4.0, 1.0, 0.0),
         large_sphere_radius,
         metal_material,
     )));
 
-    let bvh = Rc::new(Bvh::new(world, 0.0, 1.0));
+    let bvh = Arc::new(Bvh::new(world, 0.0, 1.0));
     let mut world = HittableList::new();
     world.add(bvh);
     world
@@ -281,18 +285,18 @@ fn random_moving_spheres() -> HittableList {
 
 fn two_spheres() -> HittableList {
     let mut world = HittableList::new();
-    let checkerboard = Rc::new(Lambertian::new(Rc::new(Checker::from_color(
+    let checkerboard = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
         10.0,
         dvec3(0.2, 0.3, 0.1),
         dvec3(0.9, 0.9, 0.9),
     ))));
 
-    world.add(Rc::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         dvec3(0.0, -10.0, 0.0),
         10.0,
         checkerboard.clone(),
     )));
-    world.add(Rc::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         dvec3(0.0, 10.0, 0.0),
         10.0,
         checkerboard.clone(),
@@ -304,16 +308,16 @@ fn two_spheres() -> HittableList {
 fn two_marble_spheres() -> HittableList {
     let mut world = HittableList::new();
 
-    let marble_texture = Rc::new(Marble::new(4.0));
-    world.add(Rc::new(Sphere::new(
+    let marble_texture = Arc::new(Marble::new(4.0));
+    world.add(Arc::new(Sphere::new(
         dvec3(0.0, -1000.0, 0.0),
         1000.0,
-        Rc::new(Lambertian::new(marble_texture.clone())),
+        Arc::new(Lambertian::new(marble_texture.clone())),
     )));
-    world.add(Rc::new(Sphere::new(
+    world.add(Arc::new(Sphere::new(
         dvec3(0.0, 2.0, 0.0),
         2.0,
-        Rc::new(Lambertian::new(marble_texture)),
+        Arc::new(Lambertian::new(marble_texture)),
     )));
     world
 }
