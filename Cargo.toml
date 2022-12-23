@@ -16,6 +16,7 @@ path = "src/main.rs"
 [dependencies]
 clap = { version = "4.0.29", features = ["derive", "cargo"] }
 glam = "0.22.0"
+indicatif = { version = "0.17.2", features = ["rayon"] }
 noise = "0.8.2"
 palette = "0.6.1"
 rand = "0.8.5"
