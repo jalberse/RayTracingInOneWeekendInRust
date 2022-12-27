@@ -5,7 +5,7 @@ use glam::{dvec3, DVec3};
 use crate::{
     aabb::Aabb,
     hittable::{HitRecord, Hittable},
-    materials::material::Material,
+    materials::material::MaterialEnum,
 };
 
 use super::sphere::Sphere;
@@ -19,7 +19,7 @@ pub struct MovingSphere {
     time_start: f64,
     time_end: f64,
     radius: f64,
-    pub material: Arc<dyn Material>,
+    pub material: Arc<MaterialEnum>,
 }
 
 impl MovingSphere {
@@ -29,7 +29,7 @@ impl MovingSphere {
         time_start: f64,
         time_end: f64,
         radius: f64,
-        material: Arc<dyn Material>,
+        material: Arc<MaterialEnum>,
     ) -> MovingSphere {
         MovingSphere {
             center_start,

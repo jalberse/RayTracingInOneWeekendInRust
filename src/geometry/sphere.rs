@@ -5,18 +5,18 @@ use glam::{dvec3, DVec3};
 use crate::{
     aabb::Aabb,
     hittable::{HitRecord, Hittable},
-    materials::material::Material,
+    materials::material::MaterialEnum,
     ray::Ray,
 };
 
 pub struct Sphere {
     pub center: DVec3,
     pub radius: f64,
-    pub material: Arc<dyn Material>,
+    pub material: Arc<MaterialEnum>,
 }
 
 impl Sphere {
-    pub fn new(center: DVec3, radius: f64, material: Arc<dyn Material>) -> Sphere {
+    pub fn new(center: DVec3, radius: f64, material: Arc<MaterialEnum>) -> Sphere {
         Sphere {
             center,
             radius,

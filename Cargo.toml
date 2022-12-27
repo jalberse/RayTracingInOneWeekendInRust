@@ -15,6 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 clap = { version = "4.0.29", features = ["derive", "cargo"] }
+enum_dispatch = "0.3.8"
 glam = "0.22.0"
 indicatif = { version = "0.17.2", features = ["rayon"] }
 noise = "0.8.2"

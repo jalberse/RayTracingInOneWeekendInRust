@@ -2,7 +2,7 @@ use std::{ops::Neg, sync::Arc};
 
 use glam::DVec3;
 
-use crate::{aabb::Aabb, materials::material::Material, ray::Ray};
+use crate::{aabb::Aabb, materials::material::MaterialEnum, ray::Ray};
 
 pub struct HitRecord {
     pub point: DVec3,
@@ -13,7 +13,7 @@ pub struct HitRecord {
     /// Texture v coordinate
     pub v: f64,
     pub front_face: bool,
-    pub material: Arc<dyn Material>,
+    pub material: Arc<MaterialEnum>,
 }
 
 impl HitRecord {
@@ -23,7 +23,7 @@ impl HitRecord {
         t: f64,
         u: f64,
         v: f64,
-        material: Arc<dyn Material>,
+        material: Arc<MaterialEnum>,
     ) -> HitRecord {
         let point = ray.at(t);
         let front_face = ray.direction.dot(outward_normal).is_sign_negative();
