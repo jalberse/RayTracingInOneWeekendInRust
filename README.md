@@ -12,6 +12,7 @@ Shimmer is a CPU-bound ray tracing library.
   * Metals
   * Extensible Material trait representation.
 * Textures
+  * Image textures
   * Procedural textures
   * Extensible Texture trait representation.
 * Geometry
