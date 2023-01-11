@@ -12,12 +12,14 @@ use shimmer::materials::{
 };
 use shimmer::renderer::Renderer;
 use shimmer::textures::checker::Checker;
+use shimmer::textures::image_texture::ImageTexture;
 
 use clap::{Parser, ValueEnum};
 use glam::{dvec3, DVec3};
 
 use rand::random;
 use shimmer::textures::marble::Marble;
+use std::path::Path;
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -27,6 +29,7 @@ enum Scene {
     RandomMovingSpheres,
     TwoSpheres,
     Marble,
+    Earth,
 }
 
 #[derive(Parser)]
@@ -123,6 +126,7 @@ fn main() {
         Scene::RandomMovingSpheres => random_moving_spheres(),
         Scene::TwoSpheres => two_spheres(),
         Scene::Marble => two_marble_spheres(),
+        Scene::Earth => earth(),
     };
 
     let samples_per_pixel = cli.samples_per_pixel;
@@ -315,5 +319,20 @@ fn two_marble_spheres() -> HittableList {
         2.0,
         Arc::new(Lambertian::new(marble_texture)),
     )));
+    world
+}
+
+// The relative filepath of the image texture means this works if running from the top level of the git repository,
+// but not from other working directories (such as if the built app is run elsewhere).
+// This is sufficient for now as this executable is just to demo the library for developers.
+// Ideally, the image file (and other file resources) would be specified by a scene defined in some file (in JSON, maybe)
+// and we wouldn't be defining sample scenes via code like this at all (we would provide sample scenes as separate files
+// and would just use Shimmer to parse and render the provided scene).
+fn earth() -> HittableList {
+    let earth_texture = Arc::new(ImageTexture::new(Path::new("images/earthmap.jpg")));
+    let earth_surface = Arc::new(Lambertian::new(earth_texture));
+    let globe = Arc::new(Sphere::new(dvec3(0.0, 0.0, 0.0), 2.0, earth_surface));
+    let mut world = HittableList::new();
+    world.add(globe);
     world
 }
