@@ -1,8 +1,10 @@
 use shimmer::bvh::Bvh;
 use shimmer::camera::Camera;
 use shimmer::geometry::moving_sphere::MovingSphere;
+use shimmer::geometry::rectangle::XyRect;
 use shimmer::geometry::sphere::Sphere;
 use shimmer::hittable::HittableList;
+use shimmer::materials::diffuse_light::DiffuseLight;
 use shimmer::materials::{
     dialectric::Dialectric,
     lambertian::Lambertian,
@@ -30,6 +32,7 @@ enum Scene {
     TwoSpheres,
     Marble,
     Earth,
+    SimpleLights,
 }
 
 #[derive(Parser)]
@@ -127,6 +130,12 @@ fn main() {
         Scene::TwoSpheres => two_spheres(),
         Scene::Marble => two_marble_spheres(),
         Scene::Earth => earth(),
+        Scene::SimpleLights => simple_lights(),
+    };
+
+    let background = match cli.scene {
+        Scene::SimpleLights => DVec3::ZERO,
+        _ => dvec3(0.70, 0.80, 1.00),
     };
 
     let samples_per_pixel = cli.samples_per_pixel;
@@ -135,6 +144,7 @@ fn main() {
         .render(
             &camera,
             &world,
+            background,
             samples_per_pixel,
             max_depth,
             cli.tile_width,
@@ -334,5 +344,31 @@ fn earth() -> HittableList {
     let globe = Arc::new(Sphere::new(dvec3(0.0, 0.0, 0.0), 2.0, earth_surface));
     let mut world = HittableList::new();
     world.add(globe);
+    world
+}
+
+fn simple_lights() -> HittableList {
+    let mut world = HittableList::new();
+    let marble_texture = Arc::new(Marble::new(4.0));
+    let ground = Arc::new(Sphere::new(
+        dvec3(0.0, -1000.0, 0.0),
+        1000.0,
+        Arc::new(Lambertian::new(marble_texture.clone())),
+    ));
+    world.add(ground);
+    let sphere = Arc::new(Sphere::new(
+        dvec3(0.0, 2.0, 0.0),
+        2.0,
+        Arc::new(Lambertian::new(marble_texture)),
+    ));
+    world.add(sphere);
+
+    let light_mat = Arc::new(DiffuseLight::from_color(dvec3(4.0, 4.0, 4.0)));
+    let light = Arc::new(XyRect::new(3.0, 5.0, 1.0, 3.0, -2.0, light_mat.clone()));
+    world.add(light);
+
+    let sphere_light = Arc::new(Sphere::new(dvec3(0.0, 7.0, 0.0), 2.0, light_mat));
+    world.add(sphere_light);
+
     world
 }

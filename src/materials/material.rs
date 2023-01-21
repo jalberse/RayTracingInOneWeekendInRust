@@ -1,4 +1,4 @@
-use glam::DVec3;
+use glam::{dvec3, DVec3};
 
 use crate::{hittable::HitRecord, ray::Ray};
 
@@ -10,4 +10,8 @@ pub struct ScatterRecord {
 pub trait Material: Send + Sync {
     /// Returns None if the ray is absorbed and not scattered
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<ScatterRecord>;
+
+    fn emit(&self, _u: f64, _v: f64, _point: &DVec3) -> DVec3 {
+        dvec3(0.0, 0.0, 0.0)
+    }
 }
