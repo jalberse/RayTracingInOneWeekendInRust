@@ -1,7 +1,7 @@
 use shimmer::bvh::Bvh;
 use shimmer::camera::Camera;
 use shimmer::geometry::moving_sphere::MovingSphere;
-use shimmer::geometry::rectangle::XyRect;
+use shimmer::geometry::rectangle::{XyRect, XzRect, YzRect};
 use shimmer::geometry::sphere::Sphere;
 use shimmer::hittable::HittableList;
 use shimmer::materials::diffuse_light::DiffuseLight;
@@ -33,6 +33,7 @@ enum Scene {
     Marble,
     Earth,
     SimpleLights,
+    Cornell,
 }
 
 #[derive(Parser)]
@@ -60,17 +61,17 @@ struct Cli {
     tile_height: usize,
     /// x, y, z
     /// Origin of the camera.
-    #[arg(long, num_args = 3, default_values = vec!["13.0", "2.0", "3.0"])]
+    #[arg(long, num_args = 3, allow_negative_numbers=true, default_values = vec!["13.0", "2.0", "3.0"])]
     cam_look_from: Vec<f64>,
     /// x, y, z
     /// Determines direction of camera.
-    #[arg(long, num_args = 3, default_values = vec!["0.0", "0.0", "0.0"])]
+    #[arg(long, num_args = 3, allow_negative_numbers=true, default_values = vec!["0.0", "0.0", "0.0"])]
     cam_look_at: Vec<f64>,
     /// x, y, z
     /// Determines roll of the camera along the vector from cam_look_from to cam_look_at.
     /// Useful for dutch angle shots.
     /// Typically "world up" (0.0, 1.0, 0.0).
-    #[arg(long, num_args = 3, default_values = vec!["0.0", "1.0", "0.0"])]
+    #[arg(long, num_args = 3, allow_negative_numbers=true, default_values = vec!["0.0", "1.0", "0.0"])]
     cam_view_up: Vec<f64>,
     /// Vertical field of view. This also dictates the horizontal FOV according to the aspect ratio.
     #[arg(long, default_value = "20.0")]
@@ -131,10 +132,12 @@ fn main() {
         Scene::Marble => two_marble_spheres(),
         Scene::Earth => earth(),
         Scene::SimpleLights => simple_lights(),
+        Scene::Cornell => cornell_box(),
     };
 
     let background = match cli.scene {
         Scene::SimpleLights => DVec3::ZERO,
+        Scene::Cornell => DVec3::ZERO,
         _ => dvec3(0.70, 0.80, 1.00),
     };
 
@@ -369,6 +372,54 @@ fn simple_lights() -> HittableList {
 
     let sphere_light = Arc::new(Sphere::new(dvec3(0.0, 7.0, 0.0), 2.0, light_mat));
     world.add(sphere_light);
+
+    world
+}
+
+fn cornell_box() -> HittableList {
+    let mut world = HittableList::new();
+
+    let red = Arc::new(Lambertian::from_color(dvec3(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertian::from_color(dvec3(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertian::from_color(dvec3(0.15, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::from_color(dvec3(4.0, 4.0, 4.0)));
+
+    world.add(Arc::new(YzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        green.clone(),
+    )));
+    world.add(Arc::new(YzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        0.0,
+        red.clone(),
+    )));
+    world.add(Arc::new(XzRect::new(
+        213.0, 343.0, 227.0, 332.0, 554.0, light,
+    )));
+    world.add(Arc::new(XzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        0.0,
+        white.clone(),
+    )));
+    world.add(Arc::new(XzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        white.clone(),
+    )));
+    world.add(Arc::new(XyRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white)));
 
     world
 }
