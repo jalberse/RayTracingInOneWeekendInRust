@@ -1,5 +1,6 @@
 use shimmer::bvh::Bvh;
 use shimmer::camera::Camera;
+use shimmer::geometry::cube::Cube;
 use shimmer::geometry::moving_sphere::MovingSphere;
 use shimmer::geometry::rectangle::{XyRect, XzRect, YzRect};
 use shimmer::geometry::sphere::Sphere;
@@ -419,7 +420,25 @@ fn cornell_box() -> HittableList {
         555.0,
         white.clone(),
     )));
-    world.add(Arc::new(XyRect::new(0.0, 555.0, 0.0, 555.0, 555.0, white)));
+    world.add(Arc::new(XyRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        white.clone(),
+    )));
+
+    world.add(Arc::new(Cube::new(
+        dvec3(130.0, 0.0, 65.0),
+        dvec3(295.0, 165.0, 230.0),
+        white.clone(),
+    )));
+    world.add(Arc::new(Cube::new(
+        dvec3(265.0, 0.0, 295.0),
+        dvec3(430.0, 330.0, 460.0),
+        white,
+    )));
 
     world
 }
