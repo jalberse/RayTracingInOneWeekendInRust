@@ -384,7 +384,7 @@ fn cornell_box() -> HittableList {
     let red = Arc::new(Lambertian::from_color(dvec3(0.65, 0.05, 0.05)));
     let white = Arc::new(Lambertian::from_color(dvec3(0.73, 0.73, 0.73)));
     let green = Arc::new(Lambertian::from_color(dvec3(0.12, 0.45, 0.15)));
-    let light = Arc::new(DiffuseLight::from_color(dvec3(3.0, 3.0, 3.0)));
+    let light = Arc::new(DiffuseLight::from_color(dvec3(15.0, 15.0, 15.0)));
 
     world.add(Arc::new(YzRect::new(
         0.0,
