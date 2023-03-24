@@ -1,8 +1,12 @@
 use shimmer::bvh::Bvh;
 use shimmer::camera::Camera;
+use shimmer::geometry::cube::Cube;
+use shimmer::geometry::instance::{RotateY, Translate};
 use shimmer::geometry::moving_sphere::MovingSphere;
+use shimmer::geometry::rectangle::{XyRect, XzRect, YzRect};
 use shimmer::geometry::sphere::Sphere;
 use shimmer::hittable::HittableList;
+use shimmer::materials::diffuse_light::DiffuseLight;
 use shimmer::materials::{
     dialectric::Dialectric,
     lambertian::Lambertian,
@@ -30,6 +34,8 @@ enum Scene {
     TwoSpheres,
     Marble,
     Earth,
+    SimpleLights,
+    Cornell,
 }
 
 #[derive(Parser)]
@@ -57,23 +63,23 @@ struct Cli {
     tile_height: usize,
     /// x, y, z
     /// Origin of the camera.
-    #[arg(long, num_args = 3, default_values = vec!["13.0", "2.0", "3.0"])]
+    #[arg(long, num_args = 3, allow_negative_numbers=true, default_values = vec!["13.0", "2.0", "3.0"])]
     cam_look_from: Vec<f64>,
     /// x, y, z
     /// Determines direction of camera.
-    #[arg(long, num_args = 3, default_values = vec!["0.0", "0.0", "0.0"])]
+    #[arg(long, num_args = 3, allow_negative_numbers=true, default_values = vec!["0.0", "0.0", "0.0"])]
     cam_look_at: Vec<f64>,
     /// x, y, z
     /// Determines roll of the camera along the vector from cam_look_from to cam_look_at.
     /// Useful for dutch angle shots.
     /// Typically "world up" (0.0, 1.0, 0.0).
-    #[arg(long, num_args = 3, default_values = vec!["0.0", "1.0", "0.0"])]
+    #[arg(long, num_args = 3, allow_negative_numbers=true, default_values = vec!["0.0", "1.0", "0.0"])]
     cam_view_up: Vec<f64>,
     /// Vertical field of view. This also dictates the horizontal FOV according to the aspect ratio.
     #[arg(long, default_value = "20.0")]
     cam_vertical_fov: f64,
     /// Camera aperture; twice the lens radius.
-    #[arg(long, default_value = "0.1")]
+    #[arg(long, default_value = "0.0")]
     cam_aperture: f64,
     /// Distance to the focal plane from the camera.
     #[arg(long, default_value = "10.0")]
@@ -127,6 +133,14 @@ fn main() {
         Scene::TwoSpheres => two_spheres(),
         Scene::Marble => two_marble_spheres(),
         Scene::Earth => earth(),
+        Scene::SimpleLights => simple_lights(),
+        Scene::Cornell => cornell_box(),
+    };
+
+    let background = match cli.scene {
+        Scene::SimpleLights => DVec3::ZERO,
+        Scene::Cornell => DVec3::ZERO,
+        _ => dvec3(0.70, 0.80, 1.00),
     };
 
     let samples_per_pixel = cli.samples_per_pixel;
@@ -135,6 +149,7 @@ fn main() {
         .render(
             &camera,
             &world,
+            background,
             samples_per_pixel,
             max_depth,
             cli.tile_width,
@@ -334,5 +349,105 @@ fn earth() -> HittableList {
     let globe = Arc::new(Sphere::new(dvec3(0.0, 0.0, 0.0), 2.0, earth_surface));
     let mut world = HittableList::new();
     world.add(globe);
+    world
+}
+
+fn simple_lights() -> HittableList {
+    let mut world = HittableList::new();
+    let marble_texture = Arc::new(Marble::new(4.0));
+    let ground = Arc::new(Sphere::new(
+        dvec3(0.0, -1000.0, 0.0),
+        1000.0,
+        Arc::new(Lambertian::new(marble_texture.clone())),
+    ));
+    world.add(ground);
+    let sphere = Arc::new(Sphere::new(
+        dvec3(0.0, 2.0, 0.0),
+        2.0,
+        Arc::new(Lambertian::new(marble_texture)),
+    ));
+    world.add(sphere);
+
+    let light_mat = Arc::new(DiffuseLight::from_color(dvec3(4.0, 4.0, 4.0)));
+    let light = Arc::new(XyRect::new(3.0, 5.0, 1.0, 3.0, -2.0, light_mat.clone()));
+    world.add(light);
+
+    let sphere_light = Arc::new(Sphere::new(dvec3(0.0, 7.0, 0.0), 2.0, light_mat));
+    world.add(sphere_light);
+
+    world
+}
+
+fn cornell_box() -> HittableList {
+    let mut world = HittableList::new();
+
+    let red = Arc::new(Lambertian::from_color(dvec3(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertian::from_color(dvec3(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertian::from_color(dvec3(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::from_color(dvec3(3.0, 3.0, 3.0)));
+
+    world.add(Arc::new(YzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        green.clone(),
+    )));
+    world.add(Arc::new(YzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        0.0,
+        red.clone(),
+    )));
+    world.add(Arc::new(XzRect::new(
+        213.0, 343.0, 227.0, 332.0, 554.0, light,
+    )));
+    world.add(Arc::new(XzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        0.0,
+        white.clone(),
+    )));
+    world.add(Arc::new(XzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        white.clone(),
+    )));
+    world.add(Arc::new(XyRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        white.clone(),
+    )));
+
+    let box1 = Arc::new(Cube::new(
+        DVec3::ZERO,
+        dvec3(165.0, 330.0, 165.0),
+        white.clone(),
+    ));
+    let box1 = Arc::new(RotateY::new(box1, 15.0));
+    let box1 = Arc::new(Translate::new(box1, dvec3(265.0, 0.0, 295.0)));
+
+    let box2 = Arc::new(Cube::new(
+        DVec3::ZERO,
+        dvec3(165.0, 165.0, 165.0),
+        white.clone(),
+    ));
+    let box2 = Arc::new(RotateY::new(box2, -18.0));
+    let box2 = Arc::new(Translate::new(box2, dvec3(130.0, 0.0, 65.0)));
+
+    world.add(box1);
+    world.add(box2);
+
     world
 }

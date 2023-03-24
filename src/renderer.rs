@@ -1,6 +1,7 @@
 use std::io;
 use std::io::Write;
 
+use glam::DVec3;
 use indicatif::ParallelProgressIterator;
 use palette::Pixel;
 use palette::Srgb;
@@ -37,6 +38,7 @@ impl Renderer {
         &self,
         camera: &Camera,
         world: &HittableList,
+        background: DVec3,
         samples_per_pixel: u32,
         max_depth: u32,
         tile_width: usize,
@@ -64,6 +66,7 @@ impl Renderer {
                             world,
                             max_depth,
                             camera,
+                            background,
                         );
                         tile_colors.set_color(&PixelCoordinates::new(x, y), color);
                     }
@@ -121,6 +124,7 @@ impl Renderer {
         world: &HittableList,
         max_depth: u32,
         camera: &Camera,
+        background: DVec3,
     ) -> Srgb {
         let mut color_accumulator = Srgb::new(0.0, 0.0, 0.0).into_linear();
         for _ in 0..samples_per_pixel {
@@ -128,7 +132,8 @@ impl Renderer {
             let v = (pixel_coords.y as f64 + random::<f64>()) / (self.image_height - 1) as f64;
             let ray = camera.get_ray(u, v);
 
-            color_accumulator += srgb_from_dvec3(ray.ray_color(&world, max_depth)).into_linear();
+            color_accumulator +=
+                srgb_from_dvec3(ray.ray_color(&world, max_depth, background)).into_linear();
         }
         color_accumulator = color_accumulator / samples_per_pixel as f32;
         Srgb::from_linear(color_accumulator)
