@@ -1,7 +1,7 @@
 use shimmer::bvh::Bvh;
 use shimmer::camera::Camera;
 use shimmer::geometry::cube::Cube;
-use shimmer::geometry::instance::Translate;
+use shimmer::geometry::instance::{RotateY, Translate};
 use shimmer::geometry::moving_sphere::MovingSphere;
 use shimmer::geometry::rectangle::{XyRect, XzRect, YzRect};
 use shimmer::geometry::sphere::Sphere;
@@ -79,7 +79,7 @@ struct Cli {
     #[arg(long, default_value = "20.0")]
     cam_vertical_fov: f64,
     /// Camera aperture; twice the lens radius.
-    #[arg(long, default_value = "0.1")]
+    #[arg(long, default_value = "0.0")]
     cam_aperture: f64,
     /// Distance to the focal plane from the camera.
     #[arg(long, default_value = "10.0")]
@@ -383,8 +383,8 @@ fn cornell_box() -> HittableList {
 
     let red = Arc::new(Lambertian::from_color(dvec3(0.65, 0.05, 0.05)));
     let white = Arc::new(Lambertian::from_color(dvec3(0.73, 0.73, 0.73)));
-    let green = Arc::new(Lambertian::from_color(dvec3(0.15, 0.45, 0.15)));
-    let light = Arc::new(DiffuseLight::from_color(dvec3(4.0, 4.0, 4.0)));
+    let green = Arc::new(Lambertian::from_color(dvec3(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::from_color(dvec3(3.0, 3.0, 3.0)));
 
     world.add(Arc::new(YzRect::new(
         0.0,
@@ -435,6 +435,7 @@ fn cornell_box() -> HittableList {
         dvec3(165.0, 330.0, 165.0),
         white.clone(),
     ));
+    let box1 = Arc::new(RotateY::new(box1, 15.0));
     let box1 = Arc::new(Translate::new(box1, dvec3(265.0, 0.0, 295.0)));
 
     let box2 = Arc::new(Cube::new(
@@ -442,6 +443,7 @@ fn cornell_box() -> HittableList {
         dvec3(165.0, 165.0, 165.0),
         white.clone(),
     ));
+    let box2 = Arc::new(RotateY::new(box2, -18.0));
     let box2 = Arc::new(Translate::new(box2, dvec3(130.0, 0.0, 65.0)));
 
     world.add(box1);
