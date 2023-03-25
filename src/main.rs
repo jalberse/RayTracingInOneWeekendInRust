@@ -136,7 +136,7 @@ fn main() {
         Scene::Earth => earth(),
         Scene::SimpleLights => simple_lights(),
         Scene::Cornell => cornell_box(),
-        Scene::CornellSmoke => conrell_smoke(),
+        Scene::CornellSmoke => cornell_smoke(),
     };
 
     let background = match cli.scene {
@@ -455,7 +455,7 @@ fn cornell_box() -> HittableList {
     world
 }
 
-fn conrell_smoke() -> HittableList {
+fn cornell_smoke() -> HittableList {
     let mut world = HittableList::new();
 
     let red = Arc::new(Lambertian::from_color(dvec3(0.65, 0.05, 0.05)));
