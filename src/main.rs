@@ -5,7 +5,7 @@ use shimmer::geometry::instance::{RotateY, Translate};
 use shimmer::geometry::moving_sphere::MovingSphere;
 use shimmer::geometry::rectangle::{XyRect, XzRect, YzRect};
 use shimmer::geometry::sphere::Sphere;
-use shimmer::hittable::HittableList;
+use shimmer::hittable::{ConstantMedium, HittableList};
 use shimmer::materials::diffuse_light::DiffuseLight;
 use shimmer::materials::{
     dialectric::Dialectric,
@@ -36,6 +36,7 @@ enum Scene {
     Earth,
     SimpleLights,
     Cornell,
+    CornellSmoke,
 }
 
 #[derive(Parser)]
@@ -135,11 +136,13 @@ fn main() {
         Scene::Earth => earth(),
         Scene::SimpleLights => simple_lights(),
         Scene::Cornell => cornell_box(),
+        Scene::CornellSmoke => conrell_smoke(),
     };
 
     let background = match cli.scene {
         Scene::SimpleLights => DVec3::ZERO,
         Scene::Cornell => DVec3::ZERO,
+        Scene::CornellSmoke => DVec3::ZERO,
         _ => dvec3(0.70, 0.80, 1.00),
     };
 
@@ -448,6 +451,88 @@ fn cornell_box() -> HittableList {
 
     world.add(box1);
     world.add(box2);
+
+    world
+}
+
+fn conrell_smoke() -> HittableList {
+    let mut world = HittableList::new();
+
+    let red = Arc::new(Lambertian::from_color(dvec3(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertian::from_color(dvec3(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertian::from_color(dvec3(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::from_color(dvec3(7.0, 7.0, 7.0)));
+
+    world.add(Arc::new(YzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        green.clone(),
+    )));
+    world.add(Arc::new(YzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        0.0,
+        red.clone(),
+    )));
+    world.add(Arc::new(XzRect::new(
+        113.0, 443.0, 127.0, 432.0, 554.0, light,
+    )));
+    world.add(Arc::new(XzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        0.0,
+        white.clone(),
+    )));
+    world.add(Arc::new(XzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        white.clone(),
+    )));
+    world.add(Arc::new(XyRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        white.clone(),
+    )));
+
+    let box1 = Arc::new(Cube::new(
+        DVec3::ZERO,
+        dvec3(165.0, 330.0, 165.0),
+        white.clone(),
+    ));
+    let box1 = Arc::new(RotateY::new(box1, 15.0));
+    let box1 = Arc::new(Translate::new(box1, dvec3(265.0, 0.0, 295.0)));
+
+    let box2 = Arc::new(Cube::new(
+        DVec3::ZERO,
+        dvec3(165.0, 165.0, 165.0),
+        white.clone(),
+    ));
+    let box2 = Arc::new(RotateY::new(box2, -18.0));
+    let box2 = Arc::new(Translate::new(box2, dvec3(130.0, 0.0, 65.0)));
+
+    world.add(Arc::new(ConstantMedium::new_with_color(
+        box1,
+        0.01,
+        DVec3::new(0.0, 0.0, 0.0),
+    )));
+    world.add(Arc::new(ConstantMedium::new_with_color(
+        box2,
+        0.01,
+        DVec3::new(1.0, 1.0, 1.0),
+    )));
 
     world
 }

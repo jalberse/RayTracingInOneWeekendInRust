@@ -7,6 +7,12 @@ pub struct ScatterRecord {
     pub ray: Ray,
 }
 
+impl ScatterRecord {
+    pub fn new(attenuation: DVec3, ray: Ray) -> ScatterRecord {
+        ScatterRecord { attenuation, ray }
+    }
+}
+
 pub trait Material: Send + Sync {
     /// Returns None if the ray is absorbed and not scattered
     fn scatter(&self, ray: &Ray, hit_record: &HitRecord) -> Option<ScatterRecord>;
