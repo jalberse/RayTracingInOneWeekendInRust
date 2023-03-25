@@ -126,17 +126,16 @@ impl Renderer {
         camera: &Camera,
         background: DVec3,
     ) -> Srgb {
-        let mut color_accumulator = Srgb::new(0.0, 0.0, 0.0).into_linear();
+        let mut color_accumulator = DVec3::ZERO;
         for _ in 0..samples_per_pixel {
             let u = (pixel_coords.x as f64 + random::<f64>()) / (self.image_width - 1) as f64;
             let v = (pixel_coords.y as f64 + random::<f64>()) / (self.image_height - 1) as f64;
             let ray = camera.get_ray(u, v);
 
-            color_accumulator +=
-                srgb_from_dvec3(ray.ray_color(&world, max_depth, background)).into_linear();
+            color_accumulator += ray.ray_color(&world, max_depth, background);
         }
-        color_accumulator = color_accumulator / samples_per_pixel as f32;
-        Srgb::from_linear(color_accumulator)
+        let color = color_accumulator / samples_per_pixel as f64;
+        srgb_from_dvec3(color)
     }
 }
 
