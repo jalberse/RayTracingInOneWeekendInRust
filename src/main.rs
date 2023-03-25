@@ -21,7 +21,7 @@ use shimmer::textures::image_texture::ImageTexture;
 use clap::{Parser, ValueEnum};
 use glam::{dvec3, DVec3};
 
-use rand::random;
+use rand::{random, Rng};
 use shimmer::textures::marble::Marble;
 use std::path::Path;
 use std::sync::Arc;
@@ -37,6 +37,7 @@ enum Scene {
     SimpleLights,
     Cornell,
     CornellSmoke,
+    Showcase,
 }
 
 #[derive(Parser)]
@@ -137,12 +138,14 @@ fn main() {
         Scene::SimpleLights => simple_lights(),
         Scene::Cornell => cornell_box(),
         Scene::CornellSmoke => cornell_smoke(),
+        Scene::Showcase => showcase(),
     };
 
     let background = match cli.scene {
         Scene::SimpleLights => DVec3::ZERO,
         Scene::Cornell => DVec3::ZERO,
         Scene::CornellSmoke => DVec3::ZERO,
+        Scene::Showcase => DVec3::ZERO,
         _ => dvec3(0.70, 0.80, 1.00),
     };
 
@@ -532,6 +535,125 @@ fn cornell_smoke() -> HittableList {
         box2,
         0.01,
         DVec3::new(1.0, 1.0, 1.0),
+    )));
+
+    world
+}
+
+fn showcase() -> HittableList {
+    let mut rng = rand::thread_rng();
+
+    let mut boxes = HittableList::new();
+    let ground_mat = Arc::new(Lambertian::from_color(dvec3(0.48, 0.83, 0.53)));
+    let boxes_per_side = 20;
+    for i in 0..boxes_per_side {
+        for j in 0..boxes_per_side {
+            let w = 100.0;
+            let x0 = -1000.0 + i as f64 * w;
+            let z0 = -1000.0 + j as f64 * w;
+            let y0 = 0.0;
+            let x1 = x0 + w;
+            let y1 = rng.gen_range(1.0..101.0);
+            let z1 = z0 + w;
+
+            boxes.add(Arc::new(Cube::new(
+                dvec3(x0, y0, z0),
+                dvec3(x1, y1, z1),
+                ground_mat.clone(),
+            )));
+        }
+    }
+
+    let mut world = HittableList::new();
+    world.add(Arc::new(Bvh::new(boxes, 0.0, 1.0)));
+
+    let light_mat = Arc::new(DiffuseLight::from_color(dvec3(7.0, 7.0, 7.0)));
+    world.add(Arc::new(XzRect::new(
+        123.0, 423.0, 147.0, 412.0, 554.0, light_mat,
+    )));
+
+    let center1 = dvec3(400.0, 400.0, 200.0);
+    let center2 = center1 + dvec3(30.0, 0.0, 0.0);
+
+    let moving_sphere_mat = Arc::new(Lambertian::from_color(dvec3(0.7, 0.3, 0.1)));
+    world.add(Arc::new(MovingSphere::new(
+        center1,
+        center2,
+        0.0,
+        1.0,
+        50.0,
+        moving_sphere_mat,
+    )));
+
+    world.add(Arc::new(Sphere::new(
+        dvec3(260.0, 150.0, 45.0),
+        50.0,
+        Arc::new(Dialectric::new(1.5)),
+    )));
+
+    world.add(Arc::new(Sphere::new(
+        dvec3(0.0, 150.0, 145.0),
+        50.0,
+        Arc::new(Metal::new(dvec3(0.8, 0.8, 0.9), 1.0)),
+    )));
+
+    let boundary = Arc::new(Sphere::new(
+        dvec3(360.0, 150.0, 145.0),
+        70.0,
+        Arc::new(Dialectric::new(1.5)),
+    ));
+    world.add(boundary.clone());
+    world.add(Arc::new(ConstantMedium::new_with_color(
+        boundary,
+        0.2,
+        dvec3(0.2, 0.4, 0.9),
+    )));
+
+    let boundary = Arc::new(Sphere::new(
+        dvec3(0.0, 0.0, 0.0),
+        5000.0,
+        Arc::new(Dialectric::new(1.5)),
+    ));
+    world.add(Arc::new(ConstantMedium::new_with_color(
+        boundary,
+        0.0001,
+        dvec3(1.0, 1.0, 1.0),
+    )));
+
+    let earth_mat = Arc::new(Lambertian::new(Arc::new(ImageTexture::new(Path::new(
+        "images/earthmap.jpg",
+    )))));
+    world.add(Arc::new(Sphere::new(
+        dvec3(400.0, 200.0, 400.0),
+        100.0,
+        earth_mat,
+    )));
+
+    let perlin_texture = Arc::new(Marble::new(0.1));
+    world.add(Arc::new(Sphere::new(
+        dvec3(220.0, 280.0, 300.0),
+        80.0,
+        Arc::new(Lambertian::new(perlin_texture)),
+    )));
+
+    let mut spheres = HittableList::new();
+    let white_mat = Arc::new(Lambertian::from_color(dvec3(0.73, 0.73, 0.73)));
+    let num_spheres = 1000;
+    for _ in 0..num_spheres {
+        let max_val = 165.0;
+        let random_x = rng.gen_range(0.0..max_val);
+        let random_y = rng.gen_range(0.0..max_val);
+        let random_z = rng.gen_range(0.0..max_val);
+        spheres.add(Arc::new(Sphere::new(
+            dvec3(random_x, random_y, random_z),
+            10.0,
+            white_mat.clone(),
+        )));
+    }
+
+    world.add(Arc::new(Translate::new(
+        Arc::new(RotateY::new(Arc::new(Bvh::new(spheres, 0.0, 1.0)), 15.0)),
+        dvec3(-100.0, 270.0, 395.0),
     )));
 
     world
