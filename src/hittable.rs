@@ -1,8 +1,12 @@
 use std::{ops::Neg, sync::Arc};
 
 use glam::DVec3;
+use rand::Rng;
 
-use crate::{aabb::Aabb, materials::material::Material, ray::Ray};
+use crate::{
+    aabb::Aabb, materials::isotropic::Isotropic, materials::material::Material, ray::Ray,
+    textures::texture::Texture,
+};
 
 pub struct HitRecord {
     pub point: DVec3,
@@ -120,5 +124,93 @@ impl Hittable for HittableList {
             }
         }
         output_box_maybe
+    }
+}
+
+/// A volume with constant density.
+/// The boundary must be convex.
+pub struct ConstantMedium {
+    boundary: Arc<dyn Hittable>,
+    phase_function: Arc<dyn Material>,
+    neg_inv_density: f64,
+}
+
+impl ConstantMedium {
+    pub fn new(
+        boundary: Arc<dyn Hittable>,
+        density: f64,
+        texture: Arc<dyn Texture>,
+    ) -> ConstantMedium {
+        ConstantMedium {
+            boundary,
+            phase_function: Arc::new(Isotropic::new(texture)),
+            neg_inv_density: -1.0 / density,
+        }
+    }
+
+    pub fn new_with_color(
+        boundary: Arc<dyn Hittable>,
+        density: f64,
+        color: DVec3,
+    ) -> ConstantMedium {
+        ConstantMedium {
+            boundary,
+            phase_function: Arc::new(Isotropic::from_color(color)),
+            neg_inv_density: -1.0 / density,
+        }
+    }
+}
+
+impl Hittable for ConstantMedium {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
+        let mut hit1 = self.boundary.hit(ray, f64::NEG_INFINITY, f64::INFINITY)?;
+        let mut hit2 = self.boundary.hit(ray, hit1.t + 0.0001, f64::INFINITY)?;
+
+        if hit1.t < t_min {
+            hit1.t = t_min
+        }
+        if hit2.t > t_max {
+            hit2.t = t_max
+        }
+
+        if hit1.t >= hit2.t {
+            return None;
+        }
+
+        if hit1.t < 0.0 {
+            hit1.t = 0.0
+        }
+
+        let ray_length = ray.direction.length();
+        let distance_inside_boundary = (hit2.t - hit1.t) * ray_length;
+        let mut rng = rand::thread_rng();
+        let hit_distance = self.neg_inv_density * f64::ln(rng.gen());
+
+        if hit_distance > distance_inside_boundary {
+            return None;
+        }
+
+        let out_rec_time = hit1.t + hit_distance / ray_length;
+        let out_rec_point = ray.at(out_rec_time);
+
+        let out_hit_record = HitRecord {
+            point: out_rec_point,
+            normal: DVec3::X, // Arbitrary
+            t: out_rec_time,
+            // Using either the first or second hit record's UVs doesn't make physical sense, nor
+            // would using an interpolated U/V - we are working with volumes, not on the boundary.
+            // We expect the material/texture to determine attenuation via the HitRecord.point.
+            // So, we use 0 here.
+            u: 0.0,
+            v: 0.0,
+            front_face: true, // Arbitrary
+            material: self.phase_function.clone(),
+        };
+
+        Some(out_hit_record)
+    }
+
+    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb> {
+        self.boundary.bounding_box(time_0, time_1)
     }
 }
