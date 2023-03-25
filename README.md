@@ -4,7 +4,7 @@
 
 This repository is a CPU-bound ray tracing library based on Peter Shirley's book [_Ray Tracing in One Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html) and the subsequent books in the series.
 
-It adds some additional features such as parallel, tiled rendering. It further makes changes from the books where possible to achieve more idiomatic Rust code.
+It adds some additional features such as parallel and tiled rendering. It further makes changes from the books to achieve more idiomatic Rust code where possible.
 
 # Features
 
