@@ -1,6 +1,6 @@
 # Shimmer
 
-![Sample Render](images/spheres_render_checkered.png)
+![Sample Render](images/showcase.png)
 
 Shimmer is a CPU-bound ray tracing library.
 
@@ -33,14 +33,15 @@ The Shimmer binary provides a command line interface to rendering sample scenes 
 
 # Sample Renders
 
-![Lights and Procedural Textures](images/lights_and_marble.png)
-*Lights and procedural textures*
+![Constant Density Mediums](images/smoke.png)
+
+*Constant Density Mediums*
 
 ![Motion Blur](images/motion_blur.png)
+
 *Motion blur*
 
-![Constant Density Mediums](images/smoke.png)
-*Constant Density Mediums*
+
 
 # Acknowledgements
 
