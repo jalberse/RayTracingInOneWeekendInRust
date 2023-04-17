@@ -1,4 +1,4 @@
-use glam::DVec3;
+use glam::Vec3;
 
 use crate::{hittable::HitRecord, ray::Ray};
 
@@ -9,15 +9,15 @@ use super::{
 
 #[derive(Clone, Copy)]
 pub struct Metal {
-    albedo: DVec3,
-    fuzz: f64,
+    albedo: Vec3,
+    fuzz: f32,
 }
 
 impl Metal {
-    pub fn new(albedo: DVec3, fuzz: f64) -> Metal {
+    pub fn new(albedo: Vec3, fuzz: f32) -> Metal {
         Metal {
             albedo,
-            fuzz: f64::clamp(fuzz, 0.0, 1.0),
+            fuzz: f32::clamp(fuzz, 0.0, 1.0),
         }
     }
 }

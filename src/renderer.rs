@@ -1,7 +1,7 @@
 use std::io;
 use std::io::Write;
 
-use glam::DVec3;
+use glam::Vec3;
 use indicatif::ParallelProgressIterator;
 use palette::Pixel;
 use palette::Srgb;
@@ -10,7 +10,7 @@ use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::camera::Camera;
 use crate::hittable::HittableList;
-use crate::utils::srgb_from_dvec3;
+use crate::utils::srgb_from_vec3;
 
 pub struct Renderer {
     image_width: usize,
@@ -26,10 +26,10 @@ impl Renderer {
         }
     }
 
-    pub fn from_aspect_ratio(image_width: usize, aspect_ratio: f64) -> Renderer {
+    pub fn from_aspect_ratio(image_width: usize, aspect_ratio: f32) -> Renderer {
         Renderer {
             image_width,
-            image_height: (image_width as f64 / aspect_ratio) as usize,
+            image_height: (image_width as f32 / aspect_ratio) as usize,
         }
     }
 
@@ -38,7 +38,7 @@ impl Renderer {
         &self,
         camera: &Camera,
         world: &HittableList,
-        background: DVec3,
+        background: Vec3,
         samples_per_pixel: u32,
         max_depth: u32,
         tile_width: usize,
@@ -124,18 +124,18 @@ impl Renderer {
         world: &HittableList,
         max_depth: u32,
         camera: &Camera,
-        background: DVec3,
+        background: Vec3,
     ) -> Srgb {
-        let mut color_accumulator = DVec3::ZERO;
+        let mut color_accumulator = Vec3::ZERO;
         for _ in 0..samples_per_pixel {
-            let u = (pixel_coords.x as f64 + random::<f64>()) / (self.image_width - 1) as f64;
-            let v = (pixel_coords.y as f64 + random::<f64>()) / (self.image_height - 1) as f64;
+            let u = (pixel_coords.x as f32 + random::<f32>()) / (self.image_width - 1) as f32;
+            let v = (pixel_coords.y as f32 + random::<f32>()) / (self.image_height - 1) as f32;
             let ray = camera.get_ray(u, v);
 
             color_accumulator += ray.ray_color(&world, max_depth, background);
         }
-        let color = color_accumulator / samples_per_pixel as f64;
-        srgb_from_dvec3(color)
+        let color = color_accumulator / samples_per_pixel as f32;
+        srgb_from_vec3(color)
     }
 }
 

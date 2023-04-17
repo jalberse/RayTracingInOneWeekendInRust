@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use glam::{dvec3, DVec3};
+use glam::{Vec3, vec3};
 
 use crate::{
     aabb::Aabb,
@@ -14,21 +14,21 @@ use super::sphere::Sphere;
 /// `center_end` at `time_end`. Movement continues outside those those times as well;
 /// these fields just define the velocity and position of the sphere via those two points in time.
 pub struct MovingSphere {
-    center_start: DVec3,
-    center_end: DVec3,
-    time_start: f64,
-    time_end: f64,
-    radius: f64,
+    center_start: Vec3,
+    center_end: Vec3,
+    time_start: f32,
+    time_end: f32,
+    radius: f32,
     pub material: Arc<dyn Material>,
 }
 
 impl MovingSphere {
     pub fn new(
-        center_start: DVec3,
-        center_end: DVec3,
-        time_start: f64,
-        time_end: f64,
-        radius: f64,
+        center_start: Vec3,
+        center_end: Vec3,
+        time_start: f32,
+        time_end: f32,
+        radius: f32,
         material: Arc<dyn Material>,
     ) -> MovingSphere {
         MovingSphere {
@@ -41,7 +41,7 @@ impl MovingSphere {
         }
     }
 
-    fn center(&self, time: f64) -> DVec3 {
+    fn center(&self, time: f32) -> Vec3 {
         self.center_start
             + ((time - self.time_start) / (self.time_end - self.time_start))
                 * (self.center_end - self.center_start)
@@ -52,8 +52,8 @@ impl Hittable for MovingSphere {
     fn hit(
         &self,
         ray: &crate::ray::Ray,
-        t_min: f64,
-        t_max: f64,
+        t_min: f32,
+        t_max: f32,
     ) -> Option<crate::hittable::HitRecord> {
         let oc = ray.origin - self.center(ray.time);
         let a = ray.direction.length_squared();
@@ -63,7 +63,7 @@ impl Hittable for MovingSphere {
         if discriminant.is_sign_negative() {
             return None;
         }
-        let sqrt_discriminant = f64::sqrt(discriminant);
+        let sqrt_discriminant = f32::sqrt(discriminant);
         let mut root = (-half_b - sqrt_discriminant) / a;
         if root < t_min || t_max < root {
             root = (-half_b + sqrt_discriminant) / a;
@@ -79,10 +79,10 @@ impl Hittable for MovingSphere {
         Some(HitRecord::new(&ray, normal, t, u, v, self.material.clone()))
     }
 
-    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb> {
+    fn bounding_box(&self, time_0: f32, time_1: f32) -> Option<Aabb> {
         // Note that this assumes a linear movement from the start and end position;
         // a parametric implementation wouldn't necessarily have its extent bounded like this.
-        let rad = dvec3(self.radius, self.radius, self.radius);
+        let rad = vec3(self.radius, self.radius, self.radius);
         let start_box = Aabb::new(self.center(time_0) - rad, self.center(time_0) + rad);
         let end_box = Aabb::new(self.center(time_0) - rad, self.center(time_1) + rad);
         Aabb::union(&Some(start_box), &Some(end_box))

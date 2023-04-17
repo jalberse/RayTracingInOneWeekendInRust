@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use glam::DVec3;
+use glam::Vec3;
 
 use crate::textures::{solid_color::SolidColor, texture::Texture};
 
@@ -15,7 +15,7 @@ impl DiffuseLight {
         DiffuseLight { emission_texture }
     }
 
-    pub fn from_color(color: DVec3) -> DiffuseLight {
+    pub fn from_color(color: Vec3) -> DiffuseLight {
         DiffuseLight {
             emission_texture: Arc::new(SolidColor::new(color)),
         }
@@ -31,7 +31,7 @@ impl Material for DiffuseLight {
         None
     }
 
-    fn emit(&self, u: f64, v: f64, point: &DVec3) -> DVec3 {
+    fn emit(&self, u: f32, v: f32, point: &Vec3) -> Vec3 {
         self.emission_texture.value(u, v, point)
     }
 }

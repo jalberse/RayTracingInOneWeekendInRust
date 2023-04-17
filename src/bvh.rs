@@ -12,22 +12,22 @@ pub struct Bvh {
 }
 
 impl Bvh {
-    pub fn new(list: HittableList, time_0: f64, time_1: f64) -> Bvh {
+    pub fn new(list: HittableList, time_0: f32, time_1: f32) -> Bvh {
         let root = BvhNode::new(list, time_0, time_1);
         Bvh { root }
     }
 }
 
 impl Hittable for Bvh {
-    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb> {
+    fn bounding_box(&self, time_0: f32, time_1: f32) -> Option<Aabb> {
         self.root.bounding_box(time_0, time_1)
     }
 
     fn hit(
         &self,
         ray: &crate::ray::Ray,
-        t_min: f64,
-        t_max: f64,
+        t_min: f32,
+        t_max: f32,
     ) -> Option<crate::hittable::HitRecord> {
         self.root.hit(ray, t_min, t_max)
     }
@@ -40,15 +40,15 @@ struct BvhNode {
 }
 
 impl Hittable for BvhNode {
-    fn bounding_box(&self, _time_0: f64, _time_1: f64) -> Option<Aabb> {
+    fn bounding_box(&self, _time_0: f32, _time_1: f32) -> Option<Aabb> {
         Some(self.bounding_box)
     }
 
     fn hit(
         &self,
         ray: &crate::ray::Ray,
-        t_min: f64,
-        t_max: f64,
+        t_min: f32,
+        t_max: f32,
     ) -> Option<crate::hittable::HitRecord> {
         if !self.bounding_box.hit(ray, t_min, t_max) {
             return None;
@@ -78,11 +78,11 @@ impl Hittable for BvhNode {
 }
 
 impl BvhNode {
-    pub fn new(mut list: HittableList, time_0: f64, time_1: f64) -> BvhNode {
+    pub fn new(mut list: HittableList, time_0: f32, time_1: f32) -> BvhNode {
         BvhNode::new_helper(list.objects.as_mut_slice(), time_0, time_1)
     }
 
-    fn new_helper(objects: &mut [Arc<dyn Hittable>], time_0: f64, time_1: f64) -> BvhNode {
+    fn new_helper(objects: &mut [Arc<dyn Hittable>], time_0: f32, time_1: f32) -> BvhNode {
         let mut rng = rand::thread_rng();
         // Random axis on which to divide the objects
         let axis = rng.gen_range(0..=2);

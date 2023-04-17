@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use glam::DVec3;
+use glam::Vec3;
 
 use crate::{
     ray::Ray,
@@ -21,7 +21,7 @@ impl Isotropic {
         Isotropic { albedo }
     }
 
-    pub fn from_color(color: DVec3) -> Isotropic {
+    pub fn from_color(color: Vec3) -> Isotropic {
         Isotropic {
             albedo: Arc::new(SolidColor::new(color)),
         }

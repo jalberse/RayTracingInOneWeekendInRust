@@ -1,4 +1,4 @@
-use glam::DVec3;
+use glam::Vec3;
 
 use crate::ray::Ray;
 
@@ -6,26 +6,26 @@ const DIMENSIONS: usize = 3;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Aabb {
-    min: DVec3,
-    max: DVec3,
+    min: Vec3,
+    max: Vec3,
 }
 
 impl Aabb {
-    pub fn new(min: DVec3, max: DVec3) -> Aabb {
+    pub fn new(min: Vec3, max: Vec3) -> Aabb {
         Aabb { min, max }
     }
 
-    pub fn min(&self) -> &DVec3 {
+    pub fn min(&self) -> &Vec3 {
         &self.min
     }
 
-    pub fn max(&self) -> &DVec3 {
+    pub fn max(&self) -> &Vec3 {
         &self.max
     }
 
     /// Returns true iff the ray intersects the bounding box;
     /// follows Andrew Kensler's hit method.
-    pub fn hit(&self, ray: &Ray, mut t_min: f64, mut t_max: f64) -> bool {
+    pub fn hit(&self, ray: &Ray, mut t_min: f32, mut t_max: f32) -> bool {
         for i in 0..DIMENSIONS {
             let inv_d = 1.0 / ray.direction[i];
             let t0 = (self.min[i] - ray.origin[i]) * inv_d;
@@ -46,15 +46,15 @@ impl Aabb {
             (None, Some(box1)) => Some(box1.clone()),
             (Some(box0), None) => Some(box0.clone()),
             (Some(box0), Some(box1)) => {
-                let min = DVec3::new(
-                    f64::min(box0.min().x, box1.min().x),
-                    f64::min(box0.min().y, box1.min().y),
-                    f64::min(box0.min().z, box1.min().z),
+                let min = Vec3::new(
+                    f32::min(box0.min().x, box1.min().x),
+                    f32::min(box0.min().y, box1.min().y),
+                    f32::min(box0.min().z, box1.min().z),
                 );
-                let max = DVec3::new(
-                    f64::max(box0.max().x, box1.max().x),
-                    f64::max(box0.max().y, box1.max().y),
-                    f64::max(box0.max().z, box1.max().z),
+                let max = Vec3::new(
+                    f32::max(box0.max().x, box1.max().x),
+                    f32::max(box0.max().y, box1.max().y),
+                    f32::max(box0.max().z, box1.max().z),
                 );
                 Some(Aabb::new(min, max))
             }
@@ -64,7 +64,7 @@ impl Aabb {
 
 #[cfg(test)]
 mod tests {
-    use glam::DVec3;
+    use glam::Vec3;
 
     use crate::ray::Ray;
 
@@ -72,11 +72,11 @@ mod tests {
 
     #[test]
     fn hits() {
-        let origin = DVec3::ZERO;
-        let ray = Ray::new(origin, DVec3::Z, 0.0);
+        let origin = Vec3::ZERO;
+        let ray = Ray::new(origin, Vec3::Z, 0.0);
 
-        let min = DVec3::new(-1.0, -1.0, 1.0);
-        let max = DVec3::new(1.0, 1.0, 2.0);
+        let min = Vec3::new(-1.0, -1.0, 1.0);
+        let max = Vec3::new(1.0, 1.0, 2.0);
 
         let aabb = Aabb::new(min, max);
 
@@ -85,11 +85,11 @@ mod tests {
 
     #[test]
     fn misses() {
-        let origin = DVec3::ZERO;
-        let ray = Ray::new(origin, DVec3::Z, 0.0);
+        let origin = Vec3::ZERO;
+        let ray = Ray::new(origin, Vec3::Z, 0.0);
 
-        let min = DVec3::new(1.0, 1.0, 1.0);
-        let max = DVec3::new(2.0, 2.0, 2.0);
+        let min = Vec3::new(1.0, 1.0, 1.0);
+        let max = Vec3::new(2.0, 2.0, 2.0);
 
         let aabb = Aabb::new(min, max);
 
@@ -103,8 +103,8 @@ mod tests {
 
     #[test]
     fn union_box_0_some_other_none() {
-        let min = DVec3::new(1.0, 1.0, 1.0);
-        let max = DVec3::new(2.0, 2.0, 2.0);
+        let min = Vec3::new(1.0, 1.0, 1.0);
+        let max = Vec3::new(2.0, 2.0, 2.0);
         let aabb = Aabb::new(min, max);
 
         assert_eq!(Some(aabb), Aabb::union(&Some(aabb), &None));
@@ -112,8 +112,8 @@ mod tests {
 
     #[test]
     fn union_box_1_some_other_none() {
-        let min = DVec3::new(1.0, 1.0, 1.0);
-        let max = DVec3::new(2.0, 2.0, 2.0);
+        let min = Vec3::new(1.0, 1.0, 1.0);
+        let max = Vec3::new(2.0, 2.0, 2.0);
         let aabb = Aabb::new(min, max);
 
         assert_eq!(Some(aabb), Aabb::union(&None, &Some(aabb)));
@@ -121,16 +121,16 @@ mod tests {
 
     #[test]
     fn union() {
-        let min_0 = DVec3::new(0.0, 1.0, 0.0);
-        let max_0 = DVec3::new(2.0, 4.0, 2.0);
+        let min_0 = Vec3::new(0.0, 1.0, 0.0);
+        let max_0 = Vec3::new(2.0, 4.0, 2.0);
         let aabb_0 = Aabb::new(min_0, max_0);
 
-        let min_1 = DVec3::new(1.0, 0.0, 1.0);
-        let max_1 = DVec3::new(3.0, 3.0, 3.0);
+        let min_1 = Vec3::new(1.0, 0.0, 1.0);
+        let max_1 = Vec3::new(3.0, 3.0, 3.0);
         let aabb_1 = Aabb::new(min_1, max_1);
 
-        let expected_min = DVec3::new(0.0, 0.0, 0.0);
-        let expected_max = DVec3::new(3.0, 4.0, 3.0);
+        let expected_min = Vec3::new(0.0, 0.0, 0.0);
+        let expected_max = Vec3::new(3.0, 4.0, 3.0);
         let expected_aabb = Aabb::new(expected_min, expected_max);
 
         assert_eq!(
