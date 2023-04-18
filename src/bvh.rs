@@ -183,9 +183,15 @@ impl BvhNode {
             }
         };
 
-        let left_box = left.bounding_box(time_0, time_1);
-        let right_box = right.bounding_box(time_0, time_1);
-
+        let left_box = match left {
+            Child::Index(i) => nodes[i].bounding_box(time_0, time_1),
+            Child::Hittable(hittable) => hittable.bounding_box(time_0, time_1),
+        };
+        let right_box = match right {
+            Child::Index(i) => nodes[i].bounding_box(time_0, time_1),
+            Child::Hittable(hittable) => hittable.bounding_box(time_0, time_1),
+        };
+        
         let bounding_box = match (left_box, right_box) {
             (Some(left), Some(right)) => Aabb::union(&Some(left), &Some(right)),
             _ => panic!("Missing bounding box in BVH construction"),
