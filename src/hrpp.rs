@@ -72,13 +72,13 @@ pub fn hash(ray: &Ray) -> u64 {
     let hash_direction_x = map_float_to_hash(ray.direction.x, &precision) as u64;
     let hash_direction_y = map_float_to_hash(ray.direction.y, &precision) as u64;
     let hsah_direction_z = map_float_to_hash(ray.direction.z, &precision) as u64;
-    
+
     // xor the hashes to save space
     let hash_0 = hash_origin_x ^ hsah_direction_z;
     let hash_1 = hash_origin_y ^ hash_direction_y;
     let hash_2 = hash_origin_z ^ hash_direction_x;
 
-    let predictor_table_index: u64 = (hash_0  << 0) | (hash_1 << 16) | (hash_2 << 32);
+    let predictor_table_index: u64 = (hash_0 << 0) | (hash_1 << 16) | (hash_2 << 32);
 
     predictor_table_index
 }
