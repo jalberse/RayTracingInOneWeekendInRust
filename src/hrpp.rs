@@ -3,7 +3,10 @@
 //! See https://arxiv.org/abs/1910.01304
 //! Hash-Based Ray Path Prediction: Skipping BVH Traversal Computation by Exploiting Ray Locality
 
-use crate::ray::Ray;
+use ahash::AHashMap;
+use std::sync::Arc;
+
+use crate::{bvh::BvhNode, ray::Ray};
 
 /// The number of bits extracted from float values'
 /// exponent and mantissa. So the total number of bits
@@ -17,6 +20,17 @@ enum BitPrecision {
     Five,
     Six,
     Seven,
+}
+
+struct Predictor {
+    prediction_table: AHashMap<u64, Arc<BvhNode>>,
+}
+
+impl Predictor {
+    pub fn new() -> Predictor {
+        let prediction_table = AHashMap::new();
+        Predictor { prediction_table }
+    }
 }
 
 fn map_float_to_hash(val: f32, bit_precision: &BitPrecision) -> u16 {
