@@ -33,20 +33,44 @@ use crate::{
 //      Alternatively, the nodes can store a weak reference to their parents (non-owning).
 //      But that might have its own issues; I think an Arena or Vec based methods with indices is better.
 
+// Note that there are various crates for e.g. Arena-backed trees (as opposed to Vec-backed trees)
+// which e.g. ensure that references are not invalidated when nodes are deleted and so on.
+// However, we know that the Bvh will not change once constructed, so this simple approach
+// is sufficient for our purposes.
+
+// TODO alright, I think I've got the actual construction down. Just need to fix compilation errors - match
+//        and look up node via usize if necessary.
+//      I guess the problem is the BvhNode doesn't know about the nodes list, so it can't access it.
+//       (it can during construction, since we're passing nodes in, but not for hit fns).
+//       So maybe a BvhNode isn't a hittable, and we just move its Hitting logic up to the Bvh hit() function?
+//       I think that's the approach we need.
+
+// TODO Once I have gotten it to compile with the Vec backing, A/B test with prior commit to
+//       ensure it's working as expected. Then I can start working on the Predictor integration.
+
+/// The child of a BVH node is either another BVH node, which we store the index of,
+/// or a hittable object.
+enum Child {
+    Index(usize),
+    Hittable(Arc<dyn Hittable>),
+}
+
 pub struct Bvh {
-    root: BvhNode,
+    root_index: usize,
+    nodes: Vec<BvhNode>,
 }
 
 impl Bvh {
     pub fn new(list: HittableList, time_0: f32, time_1: f32) -> Bvh {
-        let root = BvhNode::new(list, time_0, time_1);
-        Bvh { root }
+        let mut nodes = Vec::new();
+        let root_index = BvhNode::new(list, time_0, time_1, &mut nodes);
+        Bvh { root_index, nodes }
     }
 }
 
 impl Hittable for Bvh {
     fn bounding_box(&self, time_0: f32, time_1: f32) -> Option<Aabb> {
-        self.root.bounding_box(time_0, time_1)
+        self.nodes[self.root_index].bounding_box(time_0, time_1)
     }
 
     fn hit(
@@ -55,13 +79,14 @@ impl Hittable for Bvh {
         t_min: f32,
         t_max: f32,
     ) -> Option<crate::hittable::HitRecord> {
-        self.root.hit(ray, t_min, t_max)
+        self.nodes[self.root_index].hit(ray, t_min, t_max)
     }
 }
 
 pub struct BvhNode {
-    left: Arc<dyn Hittable>,
-    right: Arc<dyn Hittable>,
+    // TODO We'll add a parent, but first get it working with a non-pointer based approa ,ch.
+    left: Child,
+    right: Child,
     bounding_box: Aabb,
 }
 
@@ -104,11 +129,22 @@ impl Hittable for BvhNode {
 }
 
 impl BvhNode {
-    pub fn new(mut list: HittableList, time_0: f32, time_1: f32) -> BvhNode {
-        BvhNode::new_helper(list.objects.as_mut_slice(), time_0, time_1)
+    pub fn new(
+        mut list: HittableList,
+        time_0: f32,
+        time_1: f32,
+        nodes: &mut Vec<BvhNode>,
+    ) -> usize {
+        BvhNode::new_helper(list.objects.as_mut_slice(), time_0, time_1, nodes)
     }
 
-    fn new_helper(objects: &mut [Arc<dyn Hittable>], time_0: f32, time_1: f32) -> BvhNode {
+    // Creates a BvhNode and adds it the nodes list. Returns the index of that BvhNode in the nodes list.
+    fn new_helper(
+        objects: &mut [Arc<dyn Hittable>],
+        time_0: f32,
+        time_1: f32,
+        nodes: &mut Vec<BvhNode>,
+    ) -> usize {
         let mut rng = rand::thread_rng();
         // Random axis on which to divide the objects
         let axis = rng.gen_range(0..=2);
@@ -118,13 +154,22 @@ impl BvhNode {
             _ => box_compare_z,
         };
 
-        let (left, right) = match objects.len() {
-            1 => (objects[0].clone(), objects[0].clone()),
+        let (left, right): (Child, Child) = match objects.len() {
+            1 => (
+                Child::Hittable(objects[0].clone()),
+                Child::Hittable(objects[0].clone()),
+            ),
             2 => {
                 if comparator(&objects[0], &objects[1]) == Ordering::Less {
-                    (objects[0].clone(), objects[1].clone())
+                    (
+                        Child::Hittable(objects[0].clone()),
+                        Child::Hittable(objects[1].clone()),
+                    )
                 } else {
-                    (objects[1].clone(), objects[0].clone())
+                    (
+                        Child::Hittable(objects[1].clone()),
+                        Child::Hittable(objects[0].clone()),
+                    )
                 }
             }
             _ => {
@@ -132,10 +177,8 @@ impl BvhNode {
                 let mid = objects.len() / 2;
                 let (left_objects, right_objects) = objects.split_at_mut(mid);
                 (
-                    Arc::new(BvhNode::new_helper(left_objects, time_0, time_1))
-                        as Arc<dyn Hittable>,
-                    Arc::new(BvhNode::new_helper(right_objects, time_0, time_1))
-                        as Arc<dyn Hittable>,
+                    Child::Index(BvhNode::new_helper(left_objects, time_0, time_1, nodes)),
+                    Child::Index(BvhNode::new_helper(right_objects, time_0, time_1, nodes)),
                 )
             }
         };
@@ -149,11 +192,15 @@ impl BvhNode {
         }
         .unwrap();
 
-        BvhNode {
+        let new_node = BvhNode {
             left,
             right,
             bounding_box,
-        }
+        };
+
+        let new_node_idx = nodes.len();
+        nodes.push(new_node);
+        new_node_idx
     }
 }
 
