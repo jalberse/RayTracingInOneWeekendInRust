@@ -68,7 +68,10 @@ pub struct Bvh {
 
 impl Bvh {
     pub fn new(list: HittableList, time_0: f32, time_1: f32) -> Bvh {
-        let mut nodes = Vec::new();
+        // 2n + 1 - num nodes in binary tree for n leaf nodes.
+        //   This assumes on object per leaf node, which would be the upper bound
+        //   on how many leaf nodes we need.
+        let mut nodes = Vec::with_capacity(list.objects.len() * 2 + 1);
         let root_index = BvhNode::new(list, time_0, time_1, &mut nodes);
         Bvh { root_index, nodes }
     }

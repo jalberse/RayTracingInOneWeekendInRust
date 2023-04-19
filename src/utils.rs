@@ -19,5 +19,5 @@ pub fn random_in_unit_disk() -> Vec3 {
 pub fn srgb_from_vec3(vec: Vec3) -> Srgb {
     // Our colors from ray tracing are already in linear rgb space, so
     // we make no conversions.
-    Srgb::from_components((vec.x as f32, vec.y as f32, vec.z as f32))
+    Srgb::from_components((vec.x, vec.y, vec.z))
 }
