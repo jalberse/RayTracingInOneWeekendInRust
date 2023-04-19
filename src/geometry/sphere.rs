@@ -1,6 +1,6 @@
 use std::{f32::consts::PI, ops::Neg, sync::Arc};
 
-use glam::{Vec3, vec3};
+use glam::{Vec3, vec3, DVec3};
 
 use crate::{
     aabb::Aabb,
@@ -41,28 +41,33 @@ impl Sphere {
 
 impl Hittable for Sphere {
     fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
-        let oc = ray.origin - self.center;
-        let a = ray.direction.length_squared();
-        let half_b = oc.dot(ray.direction);
-        let c = oc.length_squared() - self.radius.powi(2);
+        let direction = DVec3::new(ray.direction.x as f64, ray.direction.y as f64, ray.direction.z as f64);
+        let origin = DVec3::new(ray.origin.x as f64, ray.origin.y as f64, ray.origin.z as f64);
+        let center = DVec3::new(self.center.x as f64, self.center.y as f64, self.center.z as f64);
+        let radius = self.radius as f64;
+
+        let oc = origin - center;
+        let a = direction.length_squared();
+        let half_b = oc.dot(direction);
+        let c = oc.length_squared() - radius.powi(2);
         let discriminant = half_b.powi(2) - a * c;
         if discriminant.is_sign_negative() {
             return None;
         }
-        let sqrt_discriminant = f32::sqrt(discriminant);
+        let sqrt_discriminant = f64::sqrt(discriminant);
         let mut root = (-half_b - sqrt_discriminant) / a;
-        if root < t_min || t_max < root {
+        if root < t_min as f64|| (t_max as f64) < root {
             root = (-half_b + sqrt_discriminant) / a;
-            if root < t_min || t_max < root {
+            if root < t_min as f64 || (t_max as f64) < root {
                 return None;
             }
         }
 
         let t = root;
-        let point = ray.at(root);
+        let point = ray.at(root as f32);
         let normal = (point - self.center) / self.radius;
         let (u, v) = Sphere::get_uv(&normal);
-        Some(HitRecord::new(&ray, normal, t, u, v, self.material.clone()))
+        Some(HitRecord::new(&ray, normal, t as f32, u, v, self.material.clone()))
     }
 
     fn bounding_box(&self, _time_0: f32, _time_1: f32) -> Option<Aabb> {
