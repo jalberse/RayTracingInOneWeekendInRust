@@ -193,7 +193,7 @@ impl BvhNode {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-        nodes: &Vec<BvhNode>,
+        nodes: &[BvhNode],
     ) -> Option<crate::hittable::HitRecord> {
         if !self.bounding_box.hit(ray, t_min, t_max) {
             return None;
