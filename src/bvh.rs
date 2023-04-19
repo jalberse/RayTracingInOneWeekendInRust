@@ -7,52 +7,10 @@ use crate::{
     hittable::{Hittable, HittableList},
 };
 
-// TODO - I think we will have an optional Predictor struct that the Bvh has.
-//        If it's present, we do the prediction stuff.
-//        Otherwise, we do stuff normally.
-//        This would all basically be handled within the Bvh::hit() implementation.
-//          The current implementation would be the "default", no-prediction case (we'd need to add to the table)
-//          Before that we'd do a prediction, and we'd have an Enum with the 4 cases - true positive, false positive, false negative, true negative
-//            (though we may not be able to detect false negatives I guess)
-//          and if it's e.g. a true positive, we just use that.
-
-// TODO I think the process for adding a new entry to the table will be to add
-//      an optional field to the HitRecord, that is the pointer/index to the parent
-//      of the hit object in the acceleration structure.
-//      So scene objects' hit records will point to the leaf node containing them
-//          (which we could just pass as an optional argument to the hit() function,
-//           and we'll pass it in the BvhNode::hit() function).
-//         BvhNode hit records don't need a pointer to their parent.
-//      So maybe it's leafNode: Optional<BvhNode>.
-//      BvhNodes themselves will then have an optional pointer to their parent nodes,
-//      since we want to traverse up the tree according to the go_up_level,
-//      since we don't just store the leaf nodes but some number of layers above the leaf node
-//      in the table.
-//      But, creating self-referential trees like that is NO BUENO in Rust due to ownership issues.
-//      So, we'll have to change to a Vec or Arena based allocations system for the Bvh nodes.
-//      Alternatively, the nodes can store a weak reference to their parents (non-owning).
-//      But that might have its own issues; I think an Arena or Vec based methods with indices is better.
-
 // Note that there are various crates for e.g. Arena-backed trees (as opposed to Vec-backed trees)
 // which e.g. ensure that references are not invalidated when nodes are deleted and so on.
 // However, we know that the Bvh will not change once constructed, so this simple approach
 // is sufficient for our purposes.
-
-// TODO alright, I think I've got the actual construction down. Just need to fix compilation errors - match
-//        and look up node via usize if necessary.
-//      I guess the problem is the BvhNode doesn't know about the nodes list, so it can't access it.
-//       (it can during construction, since we're passing nodes in, but not for hit fns).
-//       So maybe a BvhNode isn't a hittable, and we just move its Hitting logic up to the Bvh hit() function?
-//       I think that's the approach we need.
-// TODO we might be able to keep basically the same if we just implement hit() for BvhNode, but make it not be a Hittable.
-//       It can just implement bounding_box() and hit() in its own impl; we don't need it to be interchangeable with other
-//       hittables since we only handle hits for it within this module.
-//       Then, its hit() fn can take a reference to the nodes list.
-//       Then other than some match around Child, our architecture can be the same.
-//       Try this, then move to iterative approach if needed.
-
-// TODO Once I have gotten it to compile with the Vec backing, A/B test with prior commit to
-//       ensure it's working as expected. Then I can start working on the Predictor integration.
 
 /// The child of a BVH node is either another BVH node, which we store the index of,
 /// or a hittable object.
@@ -61,6 +19,8 @@ enum Child {
     Hittable(Arc<dyn Hittable>),
 }
 
+/// A bounding volume hierarchy implemented via a binary tree.
+/// The binary tree is maintained in a Vec.
 pub struct Bvh {
     root_index: usize,
     nodes: Vec<BvhNode>,
@@ -88,6 +48,10 @@ impl Hittable for Bvh {
         t_min: f32,
         t_max: f32,
     ) -> Option<crate::hittable::HitRecord> {
+        // TODO Here, we should handle using a Predictor.
+        //   We can have the Predictor as an Option<Predictor> passed into Bvh::new().
+        //   If None is supplied, we can just use our normal implementation without skipping.
+
         self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes)
     }
 }
@@ -230,11 +194,10 @@ impl BvhNode {
         };
 
         // TODO if the child is a hittable, add this node idx as the parent BVH node.
-        // TODO That's could be slightly problematic - the hitrecord wouldn't know WHAT BVH I'm referring to-
+        // TODO That's could be slightly problematic - the hitrecord wouldn't know WHICH BVH I'm referring to-
         //    there can be multiple in the scene.
         //    But I think since I'm just handling it in the context of this Bvh (intercepting the hitrecord
         //    in Bvh::hit(), it doesn't matter. But I think make a documentation note about it)
-
 
         match (hit_left, hit_right) {
             (None, None) => None,
