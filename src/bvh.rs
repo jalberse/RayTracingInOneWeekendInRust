@@ -58,6 +58,8 @@ impl Hittable for Bvh {
 
 pub struct BvhNode {
     parent: Option<usize>,
+    // Index in BVH node list
+    idx: usize,
     left: Child,
     right: Child,
     bounding_box: Aabb,
@@ -149,6 +151,7 @@ impl BvhNode {
         // when we create the parent node, we'll update its children
         let new_node = BvhNode {
             parent: None,
+            idx: new_node_idx,
             left,
             right,
             bounding_box,
@@ -179,7 +182,7 @@ impl BvhNode {
             return None;
         }
 
-        let hit_left = match &self.left {
+        let mut hit_left = match &self.left {
             Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes),
             Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max),
         };
@@ -188,16 +191,17 @@ impl BvhNode {
         } else {
             t_max
         };
-        let hit_right = match &self.right {
+        let mut hit_right = match &self.right {
             Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes),
             Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max_for_right),
         };
 
-        // TODO if the child is a hittable, add this node idx as the parent BVH node.
-        // TODO That's could be slightly problematic - the hitrecord wouldn't know WHICH BVH I'm referring to-
-        //    there can be multiple in the scene.
-        //    But I think since I'm just handling it in the context of this Bvh (intercepting the hitrecord
-        //    in Bvh::hit(), it doesn't matter. But I think make a documentation note about it)
+        if let Some(ref mut hit_record) = hit_left {
+            hit_record.parentBvhNode = Some(self.idx);
+        }
+        if let Some(ref mut hit_record) = hit_right {
+            hit_record.parentBvhNode = Some(self.idx);
+        }
 
         match (hit_left, hit_right) {
             (None, None) => None,

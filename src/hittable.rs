@@ -18,6 +18,13 @@ pub struct HitRecord {
     pub v: f32,
     pub front_face: bool,
     pub material: Arc<dyn Material>,
+    // The index of the BvhNode (leaf) node containing
+    // this hittable. This is only present if this hittable
+    // is within a BVH, and only used internally within
+    // that BVH (i.e. if there are multiple BVHs in a scene,
+    // then this index wouldn't say which one the hittable
+    // is a part of - so we only use it internally within the BVH)
+    pub parentBvhNode: Option<usize>,
 }
 
 impl HitRecord {
@@ -44,6 +51,7 @@ impl HitRecord {
             v,
             front_face,
             material,
+            parentBvhNode: None,
         }
     }
 
@@ -205,6 +213,7 @@ impl Hittable for ConstantMedium {
             v: 0.0,
             front_face: true, // Arbitrary
             material: self.phase_function.clone(),
+            parentBvhNode: None,
         };
 
         Some(out_hit_record)
