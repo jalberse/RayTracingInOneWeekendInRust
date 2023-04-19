@@ -44,6 +44,12 @@ use crate::{
 //       (it can during construction, since we're passing nodes in, but not for hit fns).
 //       So maybe a BvhNode isn't a hittable, and we just move its Hitting logic up to the Bvh hit() function?
 //       I think that's the approach we need.
+// TODO we might be able to keep basically the same if we just implement hit() for BvhNode, but make it not be a Hittable.
+//       It can just implement bounding_box() and hit() in its own impl; we don't need it to be interchangeable with other
+//       hittables since we only handle hits for it within this module.
+//       Then, its hit() fn can take a reference to the nodes list.
+//       Then other than some match around Child, our architecture can be the same.
+//       Try this, then move to iterative approach if needed.
 
 // TODO Once I have gotten it to compile with the Vec backing, A/B test with prior commit to
 //       ensure it's working as expected. Then I can start working on the Predictor integration.
@@ -79,53 +85,14 @@ impl Hittable for Bvh {
         t_min: f32,
         t_max: f32,
     ) -> Option<crate::hittable::HitRecord> {
-        self.nodes[self.root_index].hit(ray, t_min, t_max)
+        self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes)
     }
 }
 
 pub struct BvhNode {
-    // TODO We'll add a parent, but first get it working with a non-pointer based approa ,ch.
     left: Child,
     right: Child,
     bounding_box: Aabb,
-}
-
-impl Hittable for BvhNode {
-    fn bounding_box(&self, _time_0: f32, _time_1: f32) -> Option<Aabb> {
-        Some(self.bounding_box)
-    }
-
-    fn hit(
-        &self,
-        ray: &crate::ray::Ray,
-        t_min: f32,
-        t_max: f32,
-    ) -> Option<crate::hittable::HitRecord> {
-        if !self.bounding_box.hit(ray, t_min, t_max) {
-            return None;
-        }
-
-        let hit_left = self.left.hit(ray, t_min, t_max);
-        let t_max_for_right = if let Some(hit_left) = &hit_left {
-            hit_left.t
-        } else {
-            t_max
-        };
-        let hit_right = self.right.hit(ray, t_min, t_max_for_right);
-
-        match (hit_left, hit_right) {
-            (None, None) => None,
-            (Some(left), None) => Some(left),
-            (None, Some(right)) => Some(right),
-            (Some(left), Some(right)) => {
-                if left.t < right.t {
-                    Some(left)
-                } else {
-                    Some(right)
-                }
-            }
-        }
-    }
 }
 
 impl BvhNode {
@@ -183,12 +150,12 @@ impl BvhNode {
             }
         };
 
-        let left_box = match left {
-            Child::Index(i) => nodes[i].bounding_box(time_0, time_1),
+        let left_box = match &left {
+            Child::Index(i) => nodes[*i].bounding_box(time_0, time_1),
             Child::Hittable(hittable) => hittable.bounding_box(time_0, time_1),
         };
-        let right_box = match right {
-            Child::Index(i) => nodes[i].bounding_box(time_0, time_1),
+        let right_box = match &right {
+            Child::Index(i) => nodes[*i].bounding_box(time_0, time_1),
             Child::Hittable(hittable) => hittable.bounding_box(time_0, time_1),
         };
         
@@ -207,6 +174,54 @@ impl BvhNode {
         let new_node_idx = nodes.len();
         nodes.push(new_node);
         new_node_idx
+    }
+
+    fn bounding_box(&self, _time_0: f32, _time_1: f32) -> Option<Aabb> {
+        Some(self.bounding_box)
+    }
+
+    // We implement hit as a bespoke function for Bvh rather than as a Hittable
+    // implementation because we need to pass the nodes list and don't want
+    // to change the Hittable::hit() signature. Since we should never use
+    // a BvhNode outside of acceleration, that's okay; we can handle it
+    // via enumerations.
+    fn hit(
+        &self,
+        ray: &crate::ray::Ray,
+        t_min: f32,
+        t_max: f32,
+        nodes: &Vec<BvhNode>,
+    ) -> Option<crate::hittable::HitRecord> {
+        if !self.bounding_box.hit(ray, t_min, t_max) {
+            return None;
+        }
+
+        let hit_left = match &self.left {
+            Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes),
+            Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max),
+        };
+        let t_max_for_right = if let Some(hit_left) = &hit_left {
+            hit_left.t
+        } else {
+            t_max
+        };
+        let hit_right = match &self.right {
+            Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes),
+            Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max_for_right),
+        };
+
+        match (hit_left, hit_right) {
+            (None, None) => None,
+            (Some(left), None) => Some(left),
+            (None, Some(right)) => Some(right),
+            (Some(left), Some(right)) => {
+                if left.t < right.t {
+                    Some(left)
+                } else {
+                    Some(right)
+                }
+            }
+        }
     }
 }
 
