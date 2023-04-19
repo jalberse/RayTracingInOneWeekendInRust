@@ -93,6 +93,7 @@ impl Hittable for Bvh {
 }
 
 pub struct BvhNode {
+    parent: Option<usize>,
     left: Child,
     right: Child,
     bounding_box: Aabb,
@@ -168,14 +169,29 @@ impl BvhNode {
         }
         .unwrap();
 
+        // Now that we know the parent's index, we can update the children
+        // with that information.
+        let new_node_idx = nodes.len();
+        match left {
+            Child::Index(i) => nodes[i].parent = Some(new_node_idx),
+            Child::Hittable(_) => (),
+        };
+        match right {
+            Child::Index(i) => nodes[i].parent = Some(new_node_idx),
+            Child::Hittable(_) => (),
+        };
+
+        // All nodes are created with no parent initially;
+        // when we create the parent node, we'll update its children
         let new_node = BvhNode {
+            parent: None,
             left,
             right,
             bounding_box,
         };
 
-        let new_node_idx = nodes.len();
         nodes.push(new_node);
+
         new_node_idx
     }
 
@@ -212,6 +228,13 @@ impl BvhNode {
             Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes),
             Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max_for_right),
         };
+
+        // TODO if the child is a hittable, add this node idx as the parent BVH node.
+        // TODO That's could be slightly problematic - the hitrecord wouldn't know WHAT BVH I'm referring to-
+        //    there can be multiple in the scene.
+        //    But I think since I'm just handling it in the context of this Bvh (intercepting the hitrecord
+        //    in Bvh::hit(), it doesn't matter. But I think make a documentation note about it)
+
 
         match (hit_left, hit_right) {
             (None, None) => None,
