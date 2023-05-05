@@ -61,10 +61,11 @@ impl Hittable for Bvh {
 
     fn hit(&self, ray: &crate::ray::Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
         if let Some(predictor) = &self.predictor {
-            let predicted_node = predictor.get_prediction(ray);
-            if let Some(predicted_node) = predicted_node {
+            let predicted_node_idx = predictor.get_prediction(ray);
+            if let Some(predicted_node_idx) = predicted_node_idx {
                 // We have a prediction for this ray.
-                let hit_record = predicted_node.hit(ray, t_min, t_max, &self.nodes);
+                let hit_record =
+                    self.nodes[*predicted_node_idx].hit(ray, t_min, t_max, &self.nodes);
                 if let Some(hit_record) = hit_record {
                     // A true postive - the ray DID hit something within the predicted node.
                     // This is the best case outcome - we can use this result, thereby skipping traversal up to the predicted node.
@@ -95,7 +96,7 @@ impl Hittable for Bvh {
                 // TODO: The original HRPP paper shows a Go Up Level of 1 is most efficient, so we will hardcode it here,
                 // but in the future it might become configurable.
                 let go_up_level = 1;
-                let predicted_node = {
+                let predicted_node_idx = {
                     let mut cur_node_idx = leaf_node_idx;
                     for _ in 0..go_up_level {
                         assert!(self.nodes[leaf_node_idx].parent.is_some());
@@ -104,14 +105,18 @@ impl Hittable for Bvh {
                     cur_node_idx
                 };
 
-                let predicted_node = &self.nodes[predicted_node];
-
-                //    Add this as a prediction to the table - we will need to traverse up to parents via go_up_level to add that to parent, not hit node.
-                //      The Optional Parent in hitrecord must be populated so we can get back into nodes.
-                //      We can assert None for parent is an error in this module, since we always expect it from a hit originating from here.
-                //    This is both TRUE NEGATIVE (no prediciton yet) and FALSE NEGATIVE.
-                //      False negatives occur when the prediction has been evicted from the table due to size constraints.
-                //      We don't have eviction - maybe we'll add that later?
+                // TODO now, add this prediction to the table for this ray.
+                //  Issue is this - &self isn't mutable. But we need to modify the predictor.
+                //  Making self mutable for hit() requires changing every other hittable and their uses - not really teneble
+                //  We could...
+                //  1. Have hit() take an optional predictor, and all other hittables just take None.
+                //     But, then caller needs to bundle predictor and bvh, since they're tied very closely.
+                //  2. Make Bvh not a Hittable, but some AccelerationHittable, and that can take mut for hit().
+                //     We wrap that and current Hittable into some enum, and we properly split their uses like that.
+                //     But I *really* like having our dyn hittables all together...
+                //     BUt I suppose the enum can have one entry that's like, Default(Arc<dyn Hittable>), and the other is our BVH that has
+                //     its hit() function that is mutable.
+                //  3. Actually make hit() take &mut self, consequences be damned.
             }
 
             todo!()

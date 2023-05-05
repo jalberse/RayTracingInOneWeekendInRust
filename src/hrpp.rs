@@ -31,7 +31,8 @@ enum BitPrecision {
 // 3. We could theoretically have the predictor be non-hash-based in the future.
 //    This is a tertiary concern, though, really it's just simpler.
 pub struct Predictor {
-    prediction_table: AHashMap<u64, Arc<BvhNode>>,
+    // Maps the result of hash(ray) to the index of the predicted node for that hash.
+    prediction_table: AHashMap<u64, usize>,
 }
 
 impl Predictor {
@@ -42,7 +43,7 @@ impl Predictor {
 
     /// Returns the prediction if there is one.
     /// If there is no prediction for this ray, returns None.
-    pub fn get_prediction(&self, ray: &Ray) -> Option<&Arc<BvhNode>> {
+    pub fn get_prediction(&self, ray: &Ray) -> Option<&usize> {
         let key = hash(ray);
         self.prediction_table.get(&key)
     }
@@ -53,9 +54,9 @@ impl Predictor {
     }
 
     /// See https://doc.rust-lang.org/std/collections/struct.HashMap.html#method.insert
-    pub fn insert(&mut self, ray: &Ray, prediction: Arc<BvhNode>) -> Option<Arc<BvhNode>> {
+    pub fn insert(&mut self, ray: &Ray, prediction: usize) -> Option<usize> {
         let key = hash(ray);
-        self.prediction_table.insert(key, prediction.clone())
+        self.prediction_table.insert(key, prediction)
     }
 }
 
