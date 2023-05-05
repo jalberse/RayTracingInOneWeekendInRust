@@ -22,7 +22,15 @@ enum BitPrecision {
     Seven,
 }
 
-struct Predictor {
+// We define a predictor rather than using a has map directly because
+// 1. The predictor can convert Ray to a u64 for use as a key in the hash map.
+//    This is simpler than implementing Hash/Hasher for a Ray and using Ray as a key
+//    directly, since our hashing technique is non-typical.
+//    This matches the original paper's implementation which used a u64 as a key.
+// 2. It provides a limited interface for predictions, which makes use simpler,
+// 3. We could theoretically have the predictor be non-hash-based in the future.
+//    This is a tertiary concern, though, really it's just simpler.
+pub struct Predictor {
     prediction_table: AHashMap<u64, Arc<BvhNode>>,
 }
 
@@ -30,6 +38,24 @@ impl Predictor {
     pub fn new() -> Predictor {
         let prediction_table = AHashMap::new();
         Predictor { prediction_table }
+    }
+
+    /// Returns the prediction if there is one.
+    /// If there is no prediction for this ray, returns None.
+    pub fn get_prediction(&self, ray: &Ray) -> Option<&Arc<BvhNode>> {
+        let key = hash(ray);
+        self.prediction_table.get(&key)
+    }
+
+    pub fn has_prediction(&self, ray: &Ray) -> bool {
+        let key = hash(ray);
+        self.prediction_table.contains_key(&key)
+    }
+
+    /// See https://doc.rust-lang.org/std/collections/struct.HashMap.html#method.insert
+    pub fn insert(&mut self, ray: &Ray, prediction: Arc<BvhNode>) -> Option<Arc<BvhNode>> {
+        let key = hash(ray);
+        self.prediction_table.insert(key, prediction.clone())
     }
 }
 

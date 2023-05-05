@@ -4,7 +4,8 @@ use rand::Rng;
 
 use crate::{
     aabb::Aabb,
-    hittable::{Hittable, HittableList},
+    hittable::{HitRecord, Hittable, HittableList},
+    hrpp::Predictor,
 };
 
 // Note that there are various crates for e.g. Arena-backed trees (as opposed to Vec-backed trees)
@@ -24,6 +25,7 @@ enum Child {
 pub struct Bvh {
     root_index: usize,
     nodes: Vec<BvhNode>,
+    predictor: Option<Predictor>,
 }
 
 impl Bvh {
@@ -33,7 +35,22 @@ impl Bvh {
         //   on how many leaf nodes we need.
         let mut nodes = Vec::with_capacity(list.objects.len() * 2 + 1);
         let root_index = BvhNode::new(list, time_0, time_1, &mut nodes);
-        Bvh { root_index, nodes }
+        Bvh {
+            root_index,
+            nodes,
+            predictor: None,
+        }
+    }
+
+    pub fn with_predictor(
+        list: HittableList,
+        time_0: f32,
+        time_1: f32,
+        predictor: Predictor,
+    ) -> Bvh {
+        let mut bvh = Bvh::new(list, time_0, time_1);
+        bvh.predictor = Some(predictor);
+        bvh
     }
 }
 
@@ -42,17 +59,66 @@ impl Hittable for Bvh {
         self.nodes[self.root_index].bounding_box(time_0, time_1)
     }
 
-    fn hit(
-        &self,
-        ray: &crate::ray::Ray,
-        t_min: f32,
-        t_max: f32,
-    ) -> Option<crate::hittable::HitRecord> {
-        // TODO Here, we should handle using a Predictor.
-        //   We can have the Predictor as an Option<Predictor> passed into Bvh::new().
-        //   If None is supplied, we can just use our normal implementation without skipping.
+    fn hit(&self, ray: &crate::ray::Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+        if let Some(predictor) = &self.predictor {
+            let predicted_node = predictor.get_prediction(ray);
+            if let Some(predicted_node) = predicted_node {
+                // We have a prediction for this ray.
+                let hit_record = predicted_node.hit(ray, t_min, t_max, &self.nodes);
+                if let Some(hit_record) = hit_record {
+                    // A true postive - the ray DID hit something within the predicted node.
+                    // This is the best case outcome - we can use this result, thereby skipping traversal up to the predicted node.
+                    // This case can result in the wrong visual output, however, where the ray does not find the closest intersection
+                    // that may lie in a different node. See 4.3 of https://arxiv.org/abs/1910.01304
+                    return Some(hit_record);
+                } else {
+                    // A false positive - the ray did not hit anything within the predicted node.
+                    // Go back and traverse the tree from the root.
+                    // A replacement policy here instead might improve HRPP performance.
+                    return self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes);
+                }
+            } else {
+                // No prediction for this ray.
+                // Find a hit_record via regular traversal, and then add a prediction to the table for this ray.
 
-        self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes)
+                // Return if no hit; we won't make a prediction if no geometry is hit.
+                let hit_record = self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes)?;
+
+                // Since this hit_record comes from a Bvh traversal, it should have the parent bvh node populated.
+                assert!(hit_record.parentBvhNode.is_some());
+                let leaf_node_idx = hit_record.parentBvhNode?;
+
+                // HRPP’s go up level as the level in the acceleration structure tree the predictor table predicts.
+                // A Go Up Level of 0 predicts the acceleration structure’s leaf nodes.
+                // A Go Up Level of 1 predicts the parent node of the leaf nodes.
+                // A Go Up Level of 2 predicts the grand-parent node of the leaf nodes, etc
+                // TODO: The original HRPP paper shows a Go Up Level of 1 is most efficient, so we will hardcode it here,
+                // but in the future it might become configurable.
+                let go_up_level = 1;
+                let predicted_node = {
+                    let mut cur_node_idx = leaf_node_idx;
+                    for _ in 0..go_up_level {
+                        assert!(self.nodes[leaf_node_idx].parent.is_some());
+                        cur_node_idx = self.nodes[leaf_node_idx].parent?;
+                    }
+                    cur_node_idx
+                };
+
+                let predicted_node = &self.nodes[predicted_node];
+
+                //    Add this as a prediction to the table - we will need to traverse up to parents via go_up_level to add that to parent, not hit node.
+                //      The Optional Parent in hitrecord must be populated so we can get back into nodes.
+                //      We can assert None for parent is an error in this module, since we always expect it from a hit originating from here.
+                //    This is both TRUE NEGATIVE (no prediciton yet) and FALSE NEGATIVE.
+                //      False negatives occur when the prediction has been evicted from the table due to size constraints.
+                //      We don't have eviction - maybe we'll add that later?
+            }
+
+            todo!()
+        } else {
+            // No predictor. Simply traverse the tree and get the result.
+            self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes)
+        }
     }
 }
 
@@ -128,7 +194,7 @@ impl BvhNode {
             Child::Index(i) => nodes[*i].bounding_box(time_0, time_1),
             Child::Hittable(hittable) => hittable.bounding_box(time_0, time_1),
         };
-        
+
         let bounding_box = match (left_box, right_box) {
             (Some(left), Some(right)) => Aabb::union(&Some(left), &Some(right)),
             _ => panic!("Missing bounding box in BVH construction"),
