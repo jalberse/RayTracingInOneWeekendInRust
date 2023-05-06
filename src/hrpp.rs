@@ -4,14 +4,14 @@
 //! Hash-Based Ray Path Prediction: Skipping BVH Traversal Computation by Exploiting Ray Locality
 
 use ahash::AHashMap;
-use std::sync::Arc;
 
-use crate::{bvh::BvhNode, ray::Ray};
+use crate::ray::Ray;
 
 /// The number of bits extracted from float values'
 /// exponent and mantissa. So the total number of bits
 /// will be 2n + 1 (one extra being the sign bit).
 /// The original paper found 5 bits to be optimal.
+#[allow(dead_code)]
 enum BitPrecision {
     One,
     Two,

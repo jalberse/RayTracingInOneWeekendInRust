@@ -1,10 +1,13 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use glam::{Vec3, vec3};
+use ahash::AHashMap;
+use glam::{vec3, Vec3};
 
 use crate::{
     aabb::Aabb,
+    bvh::BvhId,
     hittable::{HitRecord, Hittable},
+    hrpp::Predictor,
     materials::material::Material,
 };
 
@@ -36,7 +39,8 @@ impl Hittable for XyRect {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-    ) -> Option<crate::hittable::HitRecord> {
+        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
         let t = (self.z - ray.origin.z) / ray.direction.z;
         if t < t_min || t > t_max {
             return None;
@@ -97,7 +101,8 @@ impl Hittable for XzRect {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-    ) -> Option<crate::hittable::HitRecord> {
+        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
         let t = (self.y - ray.origin.y) / ray.direction.y;
         if t < t_min || t > t_max {
             return None;
@@ -158,7 +163,8 @@ impl Hittable for YzRect {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-    ) -> Option<crate::hittable::HitRecord> {
+        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
         let t = (self.x - ray.origin.x) / ray.direction.x;
         if t < t_min || t > t_max {
             return None;

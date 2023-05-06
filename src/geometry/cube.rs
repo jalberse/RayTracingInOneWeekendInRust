@@ -1,10 +1,13 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
+use ahash::AHashMap;
 use glam::Vec3;
 
 use crate::{
     aabb::Aabb,
-    hittable::{Hittable, HittableList},
+    bvh::BvhId,
+    hittable::{HitRecord, Hittable, HittableList},
+    hrpp::Predictor,
     materials::material::Material,
 };
 
@@ -84,8 +87,9 @@ impl Hittable for Cube {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-    ) -> Option<crate::hittable::HitRecord> {
-        self.sides.hit(ray, t_min, t_max)
+        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
+        self.sides.hit(ray, t_min, t_max, predictors)
     }
 
     fn bounding_box(&self, _time_0: f32, _time_1: f32) -> Option<crate::aabb::Aabb> {

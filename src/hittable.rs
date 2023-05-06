@@ -1,11 +1,15 @@
-use std::{ops::Neg, sync::Arc};
+use std::{
+    ops::Neg,
+    sync::{Arc, Mutex},
+};
 
+use ahash::AHashMap;
 use glam::Vec3;
 use rand::Rng;
 
 use crate::{
-    aabb::Aabb, materials::isotropic::Isotropic, materials::material::Material, ray::Ray,
-    textures::texture::Texture,
+    aabb::Aabb, bvh::BvhId, hrpp::Predictor, materials::isotropic::Isotropic,
+    materials::material::Material, ray::Ray, textures::texture::Texture,
 };
 
 pub struct HitRecord {
@@ -24,7 +28,7 @@ pub struct HitRecord {
     // that BVH (i.e. if there are multiple BVHs in a scene,
     // then this index wouldn't say which one the hittable
     // is a part of - so we only use it internally within the BVH)
-    pub parentBvhNode: Option<usize>,
+    pub parent_bvh_node: Option<usize>, // TODO remove this - hitrecord should record the final hit. We'll store this in Child::Hittable and pass it up
 }
 
 impl HitRecord {
@@ -51,7 +55,7 @@ impl HitRecord {
             v,
             front_face,
             material,
-            parentBvhNode: None,
+            parent_bvh_node: None,
         }
     }
 
@@ -66,7 +70,13 @@ impl HitRecord {
 }
 
 pub trait Hittable: Send + Sync {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord>;
 
     /// Returns the bounding box of the hittable object. If the object has no bounding box
     /// (because it is an infinite plane, for example), None is returned.
@@ -96,7 +106,13 @@ impl HittableList {
 }
 
 impl Hittable for HittableList {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
         self.objects
             .iter()
             .fold(None, |closest_yet, object| -> Option<HitRecord> {
@@ -105,7 +121,7 @@ impl Hittable for HittableList {
                 } else {
                     t_max
                 };
-                if let Some(hit) = object.hit(&ray, t_min, closest_t) {
+                if let Some(hit) = object.hit(&ray, t_min, closest_t, &predictors) {
                     Some(hit)
                 } else {
                     closest_yet
@@ -170,9 +186,19 @@ impl ConstantMedium {
 }
 
 impl Hittable for ConstantMedium {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
-        let mut hit1 = self.boundary.hit(ray, f32::NEG_INFINITY, f32::INFINITY)?;
-        let mut hit2 = self.boundary.hit(ray, hit1.t + 0.0001, f32::INFINITY)?;
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
+        let mut hit1 = self
+            .boundary
+            .hit(ray, f32::NEG_INFINITY, f32::INFINITY, &predictors)?;
+        let mut hit2 = self
+            .boundary
+            .hit(ray, hit1.t + 0.0001, f32::INFINITY, predictors)?;
 
         if hit1.t < t_min {
             hit1.t = t_min
@@ -213,7 +239,7 @@ impl Hittable for ConstantMedium {
             v: 0.0,
             front_face: true, // Arbitrary
             material: self.phase_function.clone(),
-            parentBvhNode: None,
+            parent_bvh_node: None,
         };
 
         Some(out_hit_record)

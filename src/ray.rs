@@ -1,6 +1,13 @@
+use std::sync::{Arc, Mutex};
+
+use ahash::AHashMap;
 use glam::Vec3;
 
-use crate::hittable::{Hittable, HittableList};
+use crate::{
+    bvh::BvhId,
+    hittable::{Hittable, HittableList},
+    hrpp::Predictor,
+};
 
 pub struct Ray {
     pub origin: Vec3,
@@ -22,13 +29,19 @@ impl Ray {
         self.origin + t * self.direction
     }
 
-    pub fn ray_color(&self, world: &HittableList, depth: u32, background: Vec3) -> Vec3 {
+    pub fn ray_color(
+        &self,
+        world: &HittableList,
+        depth: u32,
+        background: Vec3,
+        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Vec3 {
         // Ray bounce limit reached; accumulate no further light.
         if depth <= 0 {
             return Vec3::ZERO;
         }
 
-        let hit_record = world.hit(&self, 0.001, f32::INFINITY);
+        let hit_record = world.hit(&self, 0.001, f32::INFINITY, &predictors);
         if let Some(hit_record) = hit_record {
             let emitted = hit_record
                 .material
@@ -37,7 +50,9 @@ impl Ray {
             if let Some(scatter_record) = hit_record.material.scatter(&self, &hit_record) {
                 emitted
                     + scatter_record.attenuation
-                        * scatter_record.ray.ray_color(world, depth - 1, background)
+                        * scatter_record
+                            .ray
+                            .ray_color(world, depth - 1, background, &predictors)
             } else {
                 emitted
             }

@@ -1,10 +1,17 @@
-use std::{f32::consts::PI, ops::Neg, sync::Arc};
+use std::{
+    f32::consts::PI,
+    ops::Neg,
+    sync::{Arc, Mutex},
+};
 
-use glam::{Vec3, vec3, DVec3};
+use ahash::AHashMap;
+use glam::{vec3, DVec3, Vec3};
 
 use crate::{
     aabb::Aabb,
+    bvh::BvhId,
     hittable::{HitRecord, Hittable},
+    hrpp::Predictor,
     materials::material::Material,
     ray::Ray,
 };
@@ -40,10 +47,28 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
-        let direction = DVec3::new(ray.direction.x as f64, ray.direction.y as f64, ray.direction.z as f64);
-        let origin = DVec3::new(ray.origin.x as f64, ray.origin.y as f64, ray.origin.z as f64);
-        let center = DVec3::new(self.center.x as f64, self.center.y as f64, self.center.z as f64);
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: f32,
+        t_max: f32,
+        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
+        let direction = DVec3::new(
+            ray.direction.x as f64,
+            ray.direction.y as f64,
+            ray.direction.z as f64,
+        );
+        let origin = DVec3::new(
+            ray.origin.x as f64,
+            ray.origin.y as f64,
+            ray.origin.z as f64,
+        );
+        let center = DVec3::new(
+            self.center.x as f64,
+            self.center.y as f64,
+            self.center.z as f64,
+        );
         let radius = self.radius as f64;
 
         let oc = origin - center;
@@ -56,7 +81,7 @@ impl Hittable for Sphere {
         }
         let sqrt_discriminant = f64::sqrt(discriminant);
         let mut root = (-half_b - sqrt_discriminant) / a;
-        if root < t_min as f64|| (t_max as f64) < root {
+        if root < t_min as f64 || (t_max as f64) < root {
             root = (-half_b + sqrt_discriminant) / a;
             if root < t_min as f64 || (t_max as f64) < root {
                 return None;
@@ -67,7 +92,14 @@ impl Hittable for Sphere {
         let point = ray.at(root as f32);
         let normal = (point - self.center) / self.radius;
         let (u, v) = Sphere::get_uv(&normal);
-        Some(HitRecord::new(&ray, normal, t as f32, u, v, self.material.clone()))
+        Some(HitRecord::new(
+            &ray,
+            normal,
+            t as f32,
+            u,
+            v,
+            self.material.clone(),
+        ))
     }
 
     fn bounding_box(&self, _time_0: f32, _time_1: f32) -> Option<Aabb> {

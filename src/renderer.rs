@@ -1,6 +1,9 @@
 use std::io;
 use std::io::Write;
+use std::sync::Arc;
+use std::sync::Mutex;
 
+use ahash::AHashMap;
 use glam::Vec3;
 use indicatif::ParallelProgressIterator;
 use palette::Pixel;
@@ -8,8 +11,10 @@ use palette::Srgb;
 use rand::random;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
+use crate::bvh::BvhId;
 use crate::camera::Camera;
 use crate::hittable::HittableList;
+use crate::hrpp::Predictor;
 use crate::utils::srgb_from_vec3;
 
 pub struct Renderer {
@@ -43,6 +48,7 @@ impl Renderer {
         max_depth: u32,
         tile_width: usize,
         tile_height: usize,
+        predictors: Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
     ) -> std::io::Result<()> {
         let stderr = io::stderr();
         let mut stderr_buf_writer = io::BufWriter::new(stderr);
@@ -67,6 +73,7 @@ impl Renderer {
                             max_depth,
                             camera,
                             background,
+                            predictors.clone(),
                         );
                         tile_colors.set_color(&PixelCoordinates::new(x, y), color);
                     }
@@ -125,6 +132,7 @@ impl Renderer {
         max_depth: u32,
         camera: &Camera,
         background: Vec3,
+        predictors: Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
     ) -> Srgb {
         let mut color_accumulator = Vec3::ZERO;
         for _ in 0..samples_per_pixel {
@@ -132,7 +140,7 @@ impl Renderer {
             let v = (pixel_coords.y as f32 + random::<f32>()) / (self.image_height - 1) as f32;
             let ray = camera.get_ray(u, v);
 
-            color_accumulator += ray.ray_color(&world, max_depth, background);
+            color_accumulator += ray.ray_color(&world, max_depth, background, &predictors);
         }
         let color = color_accumulator / samples_per_pixel as f32;
         srgb_from_vec3(color)

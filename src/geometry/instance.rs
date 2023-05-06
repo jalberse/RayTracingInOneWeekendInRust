@@ -1,8 +1,18 @@
-use std::{ops::Neg, sync::Arc};
+use std::{
+    ops::Neg,
+    sync::{Arc, Mutex},
+};
 
-use glam::{Vec3, vec3};
+use ahash::AHashMap;
+use glam::{vec3, Vec3};
 
-use crate::{aabb::Aabb, hittable::Hittable, ray::Ray};
+use crate::{
+    aabb::Aabb,
+    bvh::BvhId,
+    hittable::{HitRecord, Hittable},
+    hrpp::Predictor,
+    ray::Ray,
+};
 
 pub struct Translate {
     hittable: Arc<dyn Hittable>,
@@ -24,9 +34,10 @@ impl Hittable for Translate {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-    ) -> Option<crate::hittable::HitRecord> {
+        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
         let offset_ray = Ray::new(ray.origin - self.displacement, ray.direction, ray.time);
-        let mut hit_record = self.hittable.hit(&offset_ray, t_min, t_max)?;
+        let mut hit_record = self.hittable.hit(&offset_ray, t_min, t_max, predictors)?;
         hit_record.point += self.displacement;
         Some(hit_record)
     }
@@ -100,13 +111,19 @@ impl RotateY {
 }
 
 impl Hittable for RotateY {
-    fn hit(&self, ray: &Ray, t_min: f32, t_max: f32) -> Option<crate::hittable::HitRecord> {
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<crate::hittable::HitRecord> {
         let origin = self.get_rotated_dvec(&ray.origin);
         let direction = self.get_rotated_dvec(&ray.direction);
 
         let ray_rotated = Ray::new(origin, direction, ray.time);
 
-        let mut hit_record = self.hittable.hit(&ray_rotated, t_min, t_max)?;
+        let mut hit_record = self.hittable.hit(&ray_rotated, t_min, t_max, predictors)?;
 
         let point = Vec3::new(
             self.cos_theta * hit_record.point[0] + self.sin_theta * hit_record.point[2],

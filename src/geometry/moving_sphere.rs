@@ -1,10 +1,13 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use glam::{Vec3, vec3};
+use ahash::AHashMap;
+use glam::{vec3, Vec3};
 
 use crate::{
     aabb::Aabb,
+    bvh::BvhId,
     hittable::{HitRecord, Hittable},
+    hrpp::Predictor,
     materials::material::Material,
 };
 
@@ -54,7 +57,8 @@ impl Hittable for MovingSphere {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-    ) -> Option<crate::hittable::HitRecord> {
+        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
         let oc = ray.origin - self.center(ray.time);
         let a = ray.direction.length_squared();
         let half_b = oc.dot(ray.direction);

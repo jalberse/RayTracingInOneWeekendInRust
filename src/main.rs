@@ -1,4 +1,5 @@
-use shimmer::bvh::Bvh;
+use ahash::AHashMap;
+use shimmer::bvh::{Bvh, BvhId};
 use shimmer::camera::Camera;
 use shimmer::geometry::cube::Cube;
 use shimmer::geometry::instance::{RotateY, Translate};
@@ -6,6 +7,7 @@ use shimmer::geometry::moving_sphere::MovingSphere;
 use shimmer::geometry::rectangle::{XyRect, XzRect, YzRect};
 use shimmer::geometry::sphere::Sphere;
 use shimmer::hittable::{ConstantMedium, HittableList};
+use shimmer::hrpp::Predictor;
 use shimmer::materials::diffuse_light::DiffuseLight;
 use shimmer::materials::{
     dialectric::Dialectric,
@@ -19,12 +21,12 @@ use shimmer::textures::checker::Checker;
 use shimmer::textures::image_texture::ImageTexture;
 
 use clap::{Parser, ValueEnum};
-use glam::{Vec3, vec3};
+use glam::{vec3, Vec3};
 
 use rand::{random, Rng};
 use shimmer::textures::marble::Marble;
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 #[derive(ValueEnum, Clone)]
@@ -129,7 +131,7 @@ fn main() {
 
     let start = Instant::now();
 
-    let world = match cli.scene {
+    let (world, predictors) = match cli.scene {
         Scene::RandomSpheres => random_spheres(),
         Scene::RandomMovingSpheres => random_moving_spheres(),
         Scene::TwoSpheres => two_spheres(),
@@ -160,6 +162,7 @@ fn main() {
             max_depth,
             cli.tile_width,
             cli.tile_height,
+            predictors,
         )
         .unwrap();
 
@@ -167,7 +170,7 @@ fn main() {
     eprintln!("Render time: {:?}", duration);
 }
 
-fn random_spheres() -> HittableList {
+fn random_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     let mut world = HittableList::new();
 
     let material_ground = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
@@ -231,10 +234,11 @@ fn random_spheres() -> HittableList {
     let bvh = Arc::new(Bvh::new(world, 0.0, 1.0));
     let mut world = HittableList::new();
     world.add(bvh);
-    world
+
+    (world, Arc::new(None))
 }
 
-fn random_moving_spheres() -> HittableList {
+fn random_moving_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     let mut world = HittableList::new();
 
     let material_ground = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
@@ -301,10 +305,10 @@ fn random_moving_spheres() -> HittableList {
     let bvh = Arc::new(Bvh::new(world, 0.0, 1.0));
     let mut world = HittableList::new();
     world.add(bvh);
-    world
+    (world, Arc::new(None))
 }
 
-fn two_spheres() -> HittableList {
+fn two_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     let mut world = HittableList::new();
     let checkerboard = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
         10.0,
@@ -323,10 +327,10 @@ fn two_spheres() -> HittableList {
         checkerboard.clone(),
     )));
 
-    world
+    (world, Arc::new(None))
 }
 
-fn two_marble_spheres() -> HittableList {
+fn two_marble_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     let mut world = HittableList::new();
 
     let marble_texture = Arc::new(Marble::new(4.0));
@@ -340,7 +344,7 @@ fn two_marble_spheres() -> HittableList {
         2.0,
         Arc::new(Lambertian::new(marble_texture)),
     )));
-    world
+    (world, Arc::new(None))
 }
 
 // The relative filepath of the image texture means this works if running from the top level of the git repository,
@@ -349,16 +353,16 @@ fn two_marble_spheres() -> HittableList {
 // Ideally, the image file (and other file resources) would be specified by a scene defined in some file (in JSON, maybe)
 // and we wouldn't be defining sample scenes via code like this at all (we would provide sample scenes as separate files
 // and would just use Shimmer to parse and render the provided scene).
-fn earth() -> HittableList {
+fn earth() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     let earth_texture = Arc::new(ImageTexture::new(Path::new("images/earthmap.jpg")));
     let earth_surface = Arc::new(Lambertian::new(earth_texture));
     let globe = Arc::new(Sphere::new(vec3(0.0, 0.0, 0.0), 2.0, earth_surface));
     let mut world = HittableList::new();
     world.add(globe);
-    world
+    (world, Arc::new(None))
 }
 
-fn simple_lights() -> HittableList {
+fn simple_lights() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     let mut world = HittableList::new();
     let marble_texture = Arc::new(Marble::new(4.0));
     let ground = Arc::new(Sphere::new(
@@ -381,10 +385,10 @@ fn simple_lights() -> HittableList {
     let sphere_light = Arc::new(Sphere::new(vec3(0.0, 7.0, 0.0), 2.0, light_mat));
     world.add(sphere_light);
 
-    world
+    (world, Arc::new(None))
 }
 
-fn cornell_box() -> HittableList {
+fn cornell_box() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     let mut world = HittableList::new();
 
     let red = Arc::new(Lambertian::from_color(vec3(0.65, 0.05, 0.05)));
@@ -455,10 +459,10 @@ fn cornell_box() -> HittableList {
     world.add(box1);
     world.add(box2);
 
-    world
+    (world, Arc::new(None))
 }
 
-fn cornell_smoke() -> HittableList {
+fn cornell_smoke() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     let mut world = HittableList::new();
 
     let red = Arc::new(Lambertian::from_color(vec3(0.65, 0.05, 0.05)));
@@ -537,10 +541,10 @@ fn cornell_smoke() -> HittableList {
         Vec3::new(1.0, 1.0, 1.0),
     )));
 
-    world
+    (world, Arc::new(None))
 }
 
-fn showcase() -> HittableList {
+fn showcase() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     let mut rng = rand::thread_rng();
 
     let mut boxes = HittableList::new();
@@ -656,5 +660,5 @@ fn showcase() -> HittableList {
         vec3(-100.0, 270.0, 395.0),
     )));
 
-    world
+    (world, Arc::new(None))
 }

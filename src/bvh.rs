@@ -34,7 +34,6 @@ pub struct Bvh {
     id: BvhId,
     root_index: usize,
     nodes: Vec<BvhNode>,
-    predictor: Option<Predictor>,
 }
 
 impl Bvh {
@@ -49,7 +48,6 @@ impl Bvh {
             id,
             root_index,
             nodes,
-            predictor: None,
         }
     }
 
@@ -77,13 +75,33 @@ impl Hittable for Bvh {
         self.nodes[self.root_index].bounding_box(time_0, time_1)
     }
 
-    fn hit(&self, ray: &crate::ray::Ray, t_min: f32, t_max: f32) -> Option<HitRecord> {
-        if let Some(predictor) = &self.predictor {
+    fn hit(
+        &self,
+        ray: &crate::ray::Ray,
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+    ) -> Option<HitRecord> {
+        // TODO Maybe it should instead be an...
+        // &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>.
+        // I say this because we want to determine from the Option and Map if THIS bvh has a predictor.
+        // And then we want to be able to minimize how much we lock that predictor for reading/writing, just around
+        // calls to it.
+
+        // TODO This is placeholder, delete.
+        // this_bvh_predictor will I think be a Mutex<Predictor> in the end.
+        let this_bvh_predictor: Option<&Predictor> = None;
+        if let Some(predictor) = this_bvh_predictor {
             let predicted_node_idx = predictor.get_prediction(ray);
             if let Some(predicted_node_idx) = predicted_node_idx {
                 // We have a prediction for this ray.
-                let hit_record =
-                    self.nodes[*predicted_node_idx].hit(ray, t_min, t_max, &self.nodes);
+                let hit_record = self.nodes[*predicted_node_idx].hit(
+                    ray,
+                    t_min,
+                    t_max,
+                    &self.nodes,
+                    &predictors,
+                );
                 if let Some(hit_record) = hit_record {
                     // A true postive - the ray DID hit something within the predicted node.
                     // This is the best case outcome - we can use this result, thereby skipping traversal up to the predicted node.
@@ -94,18 +112,25 @@ impl Hittable for Bvh {
                     // A false positive - the ray did not hit anything within the predicted node.
                     // Go back and traverse the tree from the root.
                     // A replacement policy here instead might improve HRPP performance.
-                    return self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes);
+                    return self.nodes[self.root_index].hit(
+                        ray,
+                        t_min,
+                        t_max,
+                        &self.nodes,
+                        predictors,
+                    );
                 }
             } else {
                 // No prediction for this ray.
                 // Find a hit_record via regular traversal, and then add a prediction to the table for this ray.
 
                 // Return if no hit; we won't make a prediction if no geometry is hit.
-                let hit_record = self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes)?;
+                let hit_record =
+                    self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, &predictors)?;
 
                 // Since this hit_record comes from a Bvh traversal, it should have the parent bvh node populated.
-                assert!(hit_record.parentBvhNode.is_some());
-                let leaf_node_idx = hit_record.parentBvhNode?;
+                assert!(hit_record.parent_bvh_node.is_some());
+                let leaf_node_idx = hit_record.parent_bvh_node?;
 
                 // HRPP’s go up level as the level in the acceleration structure tree the predictor table predicts.
                 // A Go Up Level of 0 predicts the acceleration structure’s leaf nodes.
@@ -129,7 +154,7 @@ impl Hittable for Bvh {
             todo!()
         } else {
             // No predictor. Simply traverse the tree and get the result.
-            self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes)
+            self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, &predictors)
         }
     }
 }
@@ -255,14 +280,15 @@ impl BvhNode {
         t_min: f32,
         t_max: f32,
         nodes: &[BvhNode],
+        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
     ) -> Option<crate::hittable::HitRecord> {
         if !self.bounding_box.hit(ray, t_min, t_max) {
             return None;
         }
 
         let mut hit_left = match &self.left {
-            Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes),
-            Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max),
+            Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes, &predictors),
+            Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max, &predictors),
         };
         let t_max_for_right = if let Some(hit_left) = &hit_left {
             hit_left.t
@@ -270,15 +296,15 @@ impl BvhNode {
             t_max
         };
         let mut hit_right = match &self.right {
-            Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes),
-            Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max_for_right),
+            Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes, &predictors),
+            Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max_for_right, &predictors),
         };
 
         if let Some(ref mut hit_record) = hit_left {
-            hit_record.parentBvhNode = Some(self.idx);
+            hit_record.parent_bvh_node = Some(self.idx);
         }
         if let Some(ref mut hit_record) = hit_right {
-            hit_record.parentBvhNode = Some(self.idx);
+            hit_record.parent_bvh_node = Some(self.idx);
         }
 
         match (hit_left, hit_right) {
