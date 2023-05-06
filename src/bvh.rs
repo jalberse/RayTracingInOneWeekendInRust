@@ -1,5 +1,9 @@
-use std::{cmp::Ordering, sync::Arc};
+use std::{
+    cmp::Ordering,
+    sync::{Arc, Mutex},
+};
 
+use ahash::AHashMap;
 use rand::Rng;
 use uuid::Uuid;
 
@@ -8,6 +12,9 @@ use crate::{
     hittable::{HitRecord, Hittable, HittableList},
     hrpp::Predictor,
 };
+
+#[derive(Copy, Clone, Eq, Hash, PartialEq)]
+pub struct BvhId(Uuid);
 
 // Note that there are various crates for e.g. Arena-backed trees (as opposed to Vec-backed trees)
 // which e.g. ensure that references are not invalidated when nodes are deleted and so on.
@@ -24,7 +31,7 @@ enum Child {
 /// A bounding volume hierarchy implemented via a binary tree.
 /// The binary tree is maintained in a Vec.
 pub struct Bvh {
-    id: Uuid,
+    id: BvhId,
     root_index: usize,
     nodes: Vec<BvhNode>,
     predictor: Option<Predictor>,
@@ -36,7 +43,7 @@ impl Bvh {
         //   This assumes on object per leaf node, which would be the upper bound
         //   on how many leaf nodes we need.
         let mut nodes = Vec::with_capacity(list.objects.len() * 2 + 1);
-        let id = Uuid::new_v4();
+        let id = BvhId(Uuid::new_v4());
         let root_index = BvhNode::new(list, time_0, time_1, &mut nodes);
         Bvh {
             id,
@@ -46,15 +53,21 @@ impl Bvh {
         }
     }
 
-    // TODO delete, we will pass in instead.
+    /// Creates a BVH from the *list*, and creates a predictor for the BVH,
+    /// adding it to the *predictors*.
+    /// The predictors are stored separately from the BVH, as they must be modified
+    /// at render-time across threads, requiring them to be locked behind a mutex.
+    /// The predictors can be accessed by the ID of the BHV, assigned during construction.
     pub fn with_predictor(
         list: HittableList,
         time_0: f32,
         time_1: f32,
-        predictor: Predictor,
+        predictors: &mut Arc<Mutex<AHashMap<BvhId, Predictor>>>,
     ) -> Bvh {
-        let mut bvh = Bvh::new(list, time_0, time_1);
-        bvh.predictor = Some(predictor);
+        let bvh = Bvh::new(list, time_0, time_1);
+        let predictor = Predictor::new();
+        let mut data = predictors.lock().unwrap();
+        data.insert(bvh.id, predictor);
         bvh
     }
 }
