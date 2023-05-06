@@ -1,6 +1,7 @@
 use std::{cmp::Ordering, sync::Arc};
 
 use rand::Rng;
+use uuid::Uuid;
 
 use crate::{
     aabb::Aabb,
@@ -23,6 +24,7 @@ enum Child {
 /// A bounding volume hierarchy implemented via a binary tree.
 /// The binary tree is maintained in a Vec.
 pub struct Bvh {
+    id: Uuid,
     root_index: usize,
     nodes: Vec<BvhNode>,
     predictor: Option<Predictor>,
@@ -34,14 +36,17 @@ impl Bvh {
         //   This assumes on object per leaf node, which would be the upper bound
         //   on how many leaf nodes we need.
         let mut nodes = Vec::with_capacity(list.objects.len() * 2 + 1);
+        let id = Uuid::new_v4();
         let root_index = BvhNode::new(list, time_0, time_1, &mut nodes);
         Bvh {
+            id,
             root_index,
             nodes,
             predictor: None,
         }
     }
 
+    // TODO delete, we will pass in instead.
     pub fn with_predictor(
         list: HittableList,
         time_0: f32,
@@ -105,18 +110,7 @@ impl Hittable for Bvh {
                     cur_node_idx
                 };
 
-                // TODO now, add this prediction to the table for this ray.
-                //  Issue is this - &self isn't mutable. But we need to modify the predictor.
-                //  Making self mutable for hit() requires changing every other hittable and their uses - not really teneble
-                //  We could...
-                //  1. Have hit() take an optional predictor, and all other hittables just take None.
-                //     But, then caller needs to bundle predictor and bvh, since they're tied very closely.
-                //  2. Make Bvh not a Hittable, but some AccelerationHittable, and that can take mut for hit().
-                //     We wrap that and current Hittable into some enum, and we properly split their uses like that.
-                //     But I *really* like having our dyn hittables all together...
-                //     BUt I suppose the enum can have one entry that's like, Default(Arc<dyn Hittable>), and the other is our BVH that has
-                //     its hit() function that is mutable.
-                //  3. Actually make hit() take &mut self, consequences be damned.
+                // TODO now, add this prediction to the table for this ray. We will have passed that in.
             }
 
             todo!()
