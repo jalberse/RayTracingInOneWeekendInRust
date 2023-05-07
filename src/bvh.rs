@@ -106,11 +106,17 @@ impl Hittable for Bvh {
                     // This is the best case outcome - we can use this result, thereby skipping traversal up to the predicted node.
                     // This case can result in the wrong visual output, however, where the ray does not find the closest intersection
                     // that may lie in a different node. See 4.3 of https://arxiv.org/abs/1910.01304
+
+                    // TODO increment a true positive statistic
+
                     return Some(hit_record_and_leaf_node.0);
                 } else {
                     // A false positive - the ray did not hit anything within the predicted node.
                     // Go back and traverse the tree from the root.
                     // A replacement policy here instead might improve HRPP performance.
+
+                    // TODO increment a false positive statistic
+
                     let hit_rec_and_leaf_node =
                         self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, predictors);
                     return match hit_rec_and_leaf_node {
@@ -121,6 +127,8 @@ impl Hittable for Bvh {
             } else {
                 // No prediction for this ray.
                 // Find a hit_record via regular traversal, and then add a prediction to the table for this ray.
+
+                // TODO Increment a no-prediction statistic
 
                 // Return if no hit; we won't make a prediction if no geometry is hit.
                 let (hit_record, leaf_node_idx) =
