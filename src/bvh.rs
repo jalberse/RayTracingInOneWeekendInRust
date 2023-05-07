@@ -16,6 +16,9 @@ use crate::{
 #[derive(Copy, Clone, Eq, Hash, PartialEq)]
 pub struct BvhId(Uuid);
 
+#[derive(Copy, Clone, Eq, Hash, PartialEq)]
+struct LeafNodeIdx(usize);
+
 // Note that there are various crates for e.g. Arena-backed trees (as opposed to Vec-backed trees)
 // which e.g. ensure that references are not invalidated when nodes are deleted and so on.
 // However, we know that the Bvh will not change once constructed, so this simple approach
@@ -95,32 +98,31 @@ impl Hittable for Bvh {
 
             if let Some(predicted_node_idx) = predicted_node_idx {
                 // We have a prediction for this ray.
-                let hit_record =
+                let hit_record_and_leaf_node =
                     self.nodes[predicted_node_idx].hit(ray, t_min, t_max, &self.nodes, &predictors);
-                if let Some(hit_record) = hit_record {
+                if let Some(hit_record_and_leaf_node) = hit_record_and_leaf_node {
                     // A true postive - the ray DID hit something within the predicted node.
                     // This is the best case outcome - we can use this result, thereby skipping traversal up to the predicted node.
                     // This case can result in the wrong visual output, however, where the ray does not find the closest intersection
                     // that may lie in a different node. See 4.3 of https://arxiv.org/abs/1910.01304
-                    return Some(hit_record);
+                    return Some(hit_record_and_leaf_node.0);
                 } else {
                     // A false positive - the ray did not hit anything within the predicted node.
                     // Go back and traverse the tree from the root.
                     // A replacement policy here instead might improve HRPP performance.
-                    return self.nodes[self.root_index].hit(
-                        ray,
-                        t_min,
-                        t_max,
-                        &self.nodes,
-                        predictors,
-                    );
+                    let hit_rec_and_leaf_node =
+                        self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, predictors);
+                    return match hit_rec_and_leaf_node {
+                        Some(hit_rec_and_leaf_node) => Some(hit_rec_and_leaf_node.0),
+                        None => None,
+                    };
                 }
             } else {
                 // No prediction for this ray.
                 // Find a hit_record via regular traversal, and then add a prediction to the table for this ray.
 
                 // Return if no hit; we won't make a prediction if no geometry is hit.
-                let hit_record =
+                let (hit_record, leaf_node_idx) =
                     self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, &predictors)?;
 
                 // TODO remove parent bvh node from the hit record.
@@ -129,8 +131,6 @@ impl Hittable for Bvh {
                 // and the Arc<dyn Hittable>.
                 // We will populate that just like we populate for Child::Index (should be renamed to Child::Node I think?)
                 // We will then pass up the parent index alongside the HitRecord, from wherever we hit a Child::Hittable.
-                assert!(hit_record.parent_bvh_node.is_some());
-                let leaf_node_idx = hit_record.parent_bvh_node?;
 
                 // HRPP’s go up level as the level in the acceleration structure tree the predictor table predicts.
                 // A Go Up Level of 0 predicts the acceleration structure’s leaf nodes.
@@ -140,10 +140,10 @@ impl Hittable for Bvh {
                 // but in the future it might become configurable.
                 let go_up_level = 1;
                 let predicted_node_idx = {
-                    let mut cur_node_idx = leaf_node_idx;
+                    let mut cur_node_idx = leaf_node_idx.0;
                     for _ in 0..go_up_level {
-                        assert!(self.nodes[leaf_node_idx].parent.is_some());
-                        cur_node_idx = self.nodes[leaf_node_idx].parent?;
+                        assert!(self.nodes[leaf_node_idx.0].parent.is_some());
+                        cur_node_idx = self.nodes[leaf_node_idx.0].parent?;
                     }
                     cur_node_idx
                 };
@@ -156,7 +156,9 @@ impl Hittable for Bvh {
             todo!()
         } else {
             // No predictor for this BVH. Simply traverse the tree and get the result.
-            self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, &predictors)
+            let (hit_record, _) =
+                self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, &predictors)?;
+            Some(hit_record)
         }
     }
 }
@@ -276,6 +278,8 @@ impl BvhNode {
     // to change the Hittable::hit() signature. Since we should never use
     // a BvhNode outside of acceleration, that's okay; we can handle it
     // via enumerations.
+    /// Returns the hit record from traversing down the BVH, as well as the index of
+    /// the leaf node that was traversed to within this BVH.
     fn hit(
         &self,
         ray: &crate::ray::Ray,
@@ -283,38 +287,47 @@ impl BvhNode {
         t_max: f32,
         nodes: &[BvhNode],
         predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
-    ) -> Option<HitRecord> {
+    ) -> Option<(HitRecord, LeafNodeIdx)> {
         if !self.bounding_box.hit(ray, t_min, t_max) {
             return None;
         }
 
         let mut hit_left = match &self.left {
             Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes, &predictors),
-            Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max, &predictors),
+            Child::Hittable(hittable) => {
+                // If this is a Child::Hittable, we need to know which leaf node it is under.
+                // This will let us walk up the tree for the Predictor in Bvh::hit().
+                let hit_record = hittable.hit(ray, t_min, t_max, &predictors);
+                if let Some(hit_record) = hit_record {
+                    Some((hit_record, LeafNodeIdx(self.idx)))
+                } else {
+                    None
+                }
+            }
         };
         let t_max_for_right = if let Some(hit_left) = &hit_left {
-            hit_left.t
+            hit_left.0.t
         } else {
             t_max
         };
         let mut hit_right = match &self.right {
             Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes, &predictors),
-            Child::Hittable(hittable) => hittable.hit(ray, t_min, t_max_for_right, &predictors),
+            Child::Hittable(hittable) => {
+                let hit_record = hittable.hit(ray, t_min, t_max_for_right, &predictors);
+                if let Some(hit_record) = hit_record {
+                    Some((hit_record, LeafNodeIdx(self.idx)))
+                } else {
+                    None
+                }
+            }
         };
-
-        if let Some(ref mut hit_record) = hit_left {
-            hit_record.parent_bvh_node = Some(self.idx);
-        }
-        if let Some(ref mut hit_record) = hit_right {
-            hit_record.parent_bvh_node = Some(self.idx);
-        }
 
         match (hit_left, hit_right) {
             (None, None) => None,
             (Some(left), None) => Some(left),
             (None, Some(right)) => Some(right),
             (Some(left), Some(right)) => {
-                if left.t < right.t {
+                if left.0.t < right.0.t {
                     Some(left)
                 } else {
                     Some(right)
