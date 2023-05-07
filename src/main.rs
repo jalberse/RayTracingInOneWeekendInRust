@@ -162,7 +162,7 @@ fn main() {
             max_depth,
             cli.tile_width,
             cli.tile_height,
-            &predictors,
+            predictors,
         )
         .unwrap();
 
@@ -170,7 +170,7 @@ fn main() {
     eprintln!("Render time: {:?}", duration);
 }
 
-fn random_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
+fn random_spheres() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let mut world = HittableList::new();
 
     let material_ground = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
@@ -235,10 +235,10 @@ fn random_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor
     let mut world = HittableList::new();
     world.add(bvh);
 
-    (world, Arc::new(None))
+    (world, None)
 }
 
-fn random_moving_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
+fn random_moving_spheres() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let mut world = HittableList::new();
 
     let material_ground = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
@@ -305,10 +305,10 @@ fn random_moving_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Pr
     let bvh = Arc::new(Bvh::new(world, 0.0, 1.0));
     let mut world = HittableList::new();
     world.add(bvh);
-    (world, Arc::new(None))
+    (world, None)
 }
 
-fn two_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
+fn two_spheres() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let mut world = HittableList::new();
     let checkerboard = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
         10.0,
@@ -327,10 +327,10 @@ fn two_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>
         checkerboard.clone(),
     )));
 
-    (world, Arc::new(None))
+    (world, None)
 }
 
-fn two_marble_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
+fn two_marble_spheres() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let mut world = HittableList::new();
 
     let marble_texture = Arc::new(Marble::new(4.0));
@@ -344,7 +344,7 @@ fn two_marble_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predi
         2.0,
         Arc::new(Lambertian::new(marble_texture)),
     )));
-    (world, Arc::new(None))
+    (world, None)
 }
 
 // The relative filepath of the image texture means this works if running from the top level of the git repository,
@@ -353,16 +353,16 @@ fn two_marble_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predi
 // Ideally, the image file (and other file resources) would be specified by a scene defined in some file (in JSON, maybe)
 // and we wouldn't be defining sample scenes via code like this at all (we would provide sample scenes as separate files
 // and would just use Shimmer to parse and render the provided scene).
-fn earth() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
+fn earth() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let earth_texture = Arc::new(ImageTexture::new(Path::new("images/earthmap.jpg")));
     let earth_surface = Arc::new(Lambertian::new(earth_texture));
     let globe = Arc::new(Sphere::new(vec3(0.0, 0.0, 0.0), 2.0, earth_surface));
     let mut world = HittableList::new();
     world.add(globe);
-    (world, Arc::new(None))
+    (world, None)
 }
 
-fn simple_lights() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
+fn simple_lights() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let mut world = HittableList::new();
     let marble_texture = Arc::new(Marble::new(4.0));
     let ground = Arc::new(Sphere::new(
@@ -385,10 +385,10 @@ fn simple_lights() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>
     let sphere_light = Arc::new(Sphere::new(vec3(0.0, 7.0, 0.0), 2.0, light_mat));
     world.add(sphere_light);
 
-    (world, Arc::new(None))
+    (world, None)
 }
 
-fn cornell_box() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
+fn cornell_box() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let mut world = HittableList::new();
 
     let red = Arc::new(Lambertian::from_color(vec3(0.65, 0.05, 0.05)));
@@ -459,10 +459,10 @@ fn cornell_box() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>
     world.add(box1);
     world.add(box2);
 
-    (world, Arc::new(None))
+    (world, None)
 }
 
-fn cornell_smoke() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
+fn cornell_smoke() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let mut world = HittableList::new();
 
     let red = Arc::new(Lambertian::from_color(vec3(0.65, 0.05, 0.05)));
@@ -541,11 +541,13 @@ fn cornell_smoke() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>
         Vec3::new(1.0, 1.0, 1.0),
     )));
 
-    (world, Arc::new(None))
+    (world, None)
 }
 
-fn showcase() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
+fn showcase() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let mut rng = rand::thread_rng();
+
+    let mut predictors = AHashMap::<BvhId, Mutex<Predictor>>::new();
 
     let mut boxes = HittableList::new();
     let ground_mat = Arc::new(Lambertian::from_color(vec3(0.48, 0.83, 0.53)));
@@ -569,7 +571,12 @@ fn showcase() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) 
     }
 
     let mut world = HittableList::new();
-    world.add(Arc::new(Bvh::new(boxes, 0.0, 1.0)));
+    world.add(Arc::new(Bvh::with_predictor(
+        boxes,
+        0.0,
+        1.0,
+        &mut predictors,
+    )));
 
     let light_mat = Arc::new(DiffuseLight::from_color(vec3(7.0, 7.0, 7.0)));
     world.add(Arc::new(XzRect::new(
@@ -656,9 +663,12 @@ fn showcase() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) 
     }
 
     world.add(Arc::new(Translate::new(
-        Arc::new(RotateY::new(Arc::new(Bvh::new(spheres, 0.0, 1.0)), 15.0)),
+        Arc::new(RotateY::new(
+            Arc::new(Bvh::with_predictor(spheres, 0.0, 1.0, &mut predictors)),
+            15.0,
+        )),
         vec3(-100.0, 270.0, 395.0),
     )));
 
-    (world, Arc::new(None))
+    (world, Some(predictors))
 }

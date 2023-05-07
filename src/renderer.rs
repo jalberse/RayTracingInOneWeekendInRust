@@ -48,13 +48,15 @@ impl Renderer {
         max_depth: u32,
         tile_width: usize,
         tile_height: usize,
-        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
+        predictors: Option<AHashMap<BvhId, Mutex<Predictor>>>,
     ) -> std::io::Result<()> {
         let stderr = io::stderr();
         let mut stderr_buf_writer = io::BufWriter::new(stderr);
 
         let tiles = Tile::tile(self.image_width, self.image_height, tile_width, tile_height);
         let mut colors = ImageColors::new(self.image_width, self.image_height);
+
+        let predictors = Arc::new(predictors);
 
         write!(stderr_buf_writer, "Rendering tiles...\n")?;
         stderr_buf_writer.flush().unwrap();

@@ -63,12 +63,13 @@ impl Bvh {
         list: HittableList,
         time_0: f32,
         time_1: f32,
-        predictors: &mut Arc<Mutex<AHashMap<BvhId, Predictor>>>,
+        predictors: &mut AHashMap<BvhId, Mutex<Predictor>>,
     ) -> Bvh {
         let bvh = Bvh::new(list, time_0, time_1);
-        let predictor = Predictor::new();
-        let mut data = predictors.lock().unwrap();
-        data.insert(bvh.id, predictor);
+
+        let predictor = Mutex::new(Predictor::new());
+        predictors.insert(bvh.id, predictor);
+
         bvh
     }
 }
@@ -125,12 +126,7 @@ impl Hittable for Bvh {
                 let (hit_record, leaf_node_idx) =
                     self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, &predictors)?;
 
-                // TODO remove parent bvh node from the hit record.
-                // The hit record should only contain information about final hit for rendering.
-                // Instead, the parent should be stored with the Child::Hittable (in a new struct that holds the parent index
-                // and the Arc<dyn Hittable>.
-                // We will populate that just like we populate for Child::Index (should be renamed to Child::Node I think?)
-                // We will then pass up the parent index alongside the HitRecord, from wherever we hit a Child::Hittable.
+                // We will return the hit record, but first add a prediction to the table for this ray.
 
                 // HRPP’s go up level as the level in the acceleration structure tree the predictor table predicts.
                 // A Go Up Level of 0 predicts the acceleration structure’s leaf nodes.
@@ -151,9 +147,9 @@ impl Hittable for Bvh {
                 let mut predictor = predictor_mtx.lock().unwrap();
                 predictor.insert(&ray, predicted_node_idx);
                 drop(predictor);
-            }
 
-            todo!()
+                return Some(hit_record);
+            }
         } else {
             // No predictor for this BVH. Simply traverse the tree and get the result.
             let (hit_record, _) =
@@ -292,7 +288,7 @@ impl BvhNode {
             return None;
         }
 
-        let mut hit_left = match &self.left {
+        let hit_left = match &self.left {
             Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes, &predictors),
             Child::Hittable(hittable) => {
                 // If this is a Child::Hittable, we need to know which leaf node it is under.
@@ -310,7 +306,7 @@ impl BvhNode {
         } else {
             t_max
         };
-        let mut hit_right = match &self.right {
+        let hit_right = match &self.right {
             Child::Index(i) => nodes[*i].hit(ray, t_min, t_max, nodes, &predictors),
             Child::Hittable(hittable) => {
                 let hit_record = hittable.hit(ray, t_min, t_max_for_right, &predictors);
