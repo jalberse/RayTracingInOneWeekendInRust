@@ -101,7 +101,7 @@ impl Hittable for XzRect {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
+        _predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         let t = (self.y - ray.origin.y) / ray.direction.y;
         if t < t_min || t > t_max {

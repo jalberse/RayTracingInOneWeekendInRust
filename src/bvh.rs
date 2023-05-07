@@ -82,26 +82,21 @@ impl Hittable for Bvh {
         t_max: f32,
         predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
-        // TODO Maybe it should instead be an...
-        // &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>.
-        // I say this because we want to determine from the Option and Map if THIS bvh has a predictor.
-        // And then we want to be able to minimize how much we lock that predictor for reading/writing, just around
-        // calls to it.
+        // Get the predictor, if the set of predictors is supplied and if this BVH has a predictor in the set.
+        let this_bvh_predictor_maybe = match predictors.as_ref() {
+            Some(predictor_map) => predictor_map.get(&self.id),
+            None => None,
+        };
 
-        // TODO This is placeholder, delete.
-        // this_bvh_predictor will I think be a Mutex<Predictor> in the end.
-        let this_bvh_predictor: Option<&Predictor> = None;
-        if let Some(predictor) = this_bvh_predictor {
+        if let Some(predictor_mtx) = this_bvh_predictor_maybe {
+            let predictor = predictor_mtx.lock().unwrap();
             let predicted_node_idx = predictor.get_prediction(ray);
+            drop(predictor);
+
             if let Some(predicted_node_idx) = predicted_node_idx {
                 // We have a prediction for this ray.
-                let hit_record = self.nodes[*predicted_node_idx].hit(
-                    ray,
-                    t_min,
-                    t_max,
-                    &self.nodes,
-                    &predictors,
-                );
+                let hit_record =
+                    self.nodes[predicted_node_idx].hit(ray, t_min, t_max, &self.nodes, &predictors);
                 if let Some(hit_record) = hit_record {
                     // A true postive - the ray DID hit something within the predicted node.
                     // This is the best case outcome - we can use this result, thereby skipping traversal up to the predicted node.
@@ -128,7 +123,12 @@ impl Hittable for Bvh {
                 let hit_record =
                     self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, &predictors)?;
 
-                // Since this hit_record comes from a Bvh traversal, it should have the parent bvh node populated.
+                // TODO remove parent bvh node from the hit record.
+                // The hit record should only contain information about final hit for rendering.
+                // Instead, the parent should be stored with the Child::Hittable (in a new struct that holds the parent index
+                // and the Arc<dyn Hittable>.
+                // We will populate that just like we populate for Child::Index (should be renamed to Child::Node I think?)
+                // We will then pass up the parent index alongside the HitRecord, from wherever we hit a Child::Hittable.
                 assert!(hit_record.parent_bvh_node.is_some());
                 let leaf_node_idx = hit_record.parent_bvh_node?;
 
@@ -148,12 +148,14 @@ impl Hittable for Bvh {
                     cur_node_idx
                 };
 
-                // TODO now, add this prediction to the table for this ray. We will have passed that in.
+                let mut predictor = predictor_mtx.lock().unwrap();
+                predictor.insert(&ray, predicted_node_idx);
+                drop(predictor);
             }
 
             todo!()
         } else {
-            // No predictor. Simply traverse the tree and get the result.
+            // No predictor for this BVH. Simply traverse the tree and get the result.
             self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, &predictors)
         }
     }
@@ -281,7 +283,7 @@ impl BvhNode {
         t_max: f32,
         nodes: &[BvhNode],
         predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
-    ) -> Option<crate::hittable::HitRecord> {
+    ) -> Option<HitRecord> {
         if !self.bounding_box.hit(ray, t_min, t_max) {
             return None;
         }

@@ -43,9 +43,9 @@ impl Predictor {
 
     /// Returns the prediction if there is one.
     /// If there is no prediction for this ray, returns None.
-    pub fn get_prediction(&self, ray: &Ray) -> Option<&usize> {
+    pub fn get_prediction(&self, ray: &Ray) -> Option<usize> {
         let key = hash(ray);
-        self.prediction_table.get(&key)
+        self.prediction_table.get(&key).copied()
     }
 
     pub fn has_prediction(&self, ray: &Ray) -> bool {
