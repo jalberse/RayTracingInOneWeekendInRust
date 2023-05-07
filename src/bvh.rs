@@ -13,7 +13,7 @@ use crate::{
     hrpp::Predictor,
 };
 
-#[derive(Copy, Clone, Eq, Hash, PartialEq)]
+#[derive(Copy, Clone, Eq, Hash, PartialEq, Debug)]
 pub struct BvhId(Uuid);
 
 #[derive(Copy, Clone, Eq, Hash, PartialEq)]
@@ -67,7 +67,7 @@ impl Bvh {
     ) -> Bvh {
         let bvh = Bvh::new(list, time_0, time_1);
 
-        let predictor = Mutex::new(Predictor::new());
+        let predictor = Mutex::new(Predictor::new(bvh.id));
         predictors.insert(bvh.id, predictor);
 
         bvh
@@ -107,7 +107,10 @@ impl Hittable for Bvh {
                     // This case can result in the wrong visual output, however, where the ray does not find the closest intersection
                     // that may lie in a different node. See 4.3 of https://arxiv.org/abs/1910.01304
 
-                    // TODO increment a true positive statistic
+                    // TODO Comment this out when I'm not interested in collecting statistics. Unnecessary locks.
+                    let mut predictor = predictor_mtx.lock().unwrap();
+                    predictor.true_positive_predictions += 1;
+                    drop(predictor);
 
                     return Some(hit_record_and_leaf_node.0);
                 } else {
@@ -115,7 +118,10 @@ impl Hittable for Bvh {
                     // Go back and traverse the tree from the root.
                     // A replacement policy here instead might improve HRPP performance.
 
-                    // TODO increment a false positive statistic
+                    // TODO Comment this out when I'm not interested in collecting statistics. Unnecessary locks.
+                    let mut predictor = predictor_mtx.lock().unwrap();
+                    predictor.false_positive_predictions += 1;
+                    drop(predictor);
 
                     let hit_rec_and_leaf_node =
                         self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, predictors);
@@ -128,7 +134,10 @@ impl Hittable for Bvh {
                 // No prediction for this ray.
                 // Find a hit_record via regular traversal, and then add a prediction to the table for this ray.
 
-                // TODO Increment a no-prediction statistic
+                // TODO Comment this out when I'm not interested in collecting statistics. Unnecessary locks.
+                let mut predictor = predictor_mtx.lock().unwrap();
+                predictor.no_predictions += 1;
+                drop(predictor);
 
                 // Return if no hit; we won't make a prediction if no geometry is hit.
                 let (hit_record, leaf_node_idx) =

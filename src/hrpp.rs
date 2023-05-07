@@ -5,7 +5,7 @@
 
 use ahash::AHashMap;
 
-use crate::ray::Ray;
+use crate::{bvh::BvhId, ray::Ray};
 
 /// The number of bits extracted from float values'
 /// exponent and mantissa. So the total number of bits
@@ -31,14 +31,27 @@ enum BitPrecision {
 // 3. We could theoretically have the predictor be non-hash-based in the future.
 //    This is a tertiary concern, though, really it's just simpler.
 pub struct Predictor {
+    id: BvhId,
     // Maps the result of hash(ray) to the index of the predicted node for that hash.
     prediction_table: AHashMap<u64, usize>,
+    // TODO it would be better to store statistics outside of the predictor, so we don't need
+    //  to lock access to the predictor just to increment these stats.
+    //  But we can just comment out stat collection if we want to test wall clock time etc...
+    pub true_positive_predictions: u32,
+    pub false_positive_predictions: u32,
+    pub no_predictions: u32,
 }
 
 impl Predictor {
-    pub fn new() -> Predictor {
+    pub fn new(id: BvhId) -> Predictor {
         let prediction_table = AHashMap::new();
-        Predictor { prediction_table }
+        Predictor {
+            id,
+            prediction_table,
+            true_positive_predictions: 0,
+            false_positive_predictions: 0,
+            no_predictions: 0,
+        }
     }
 
     /// Returns the prediction if there is one.
@@ -57,6 +70,26 @@ impl Predictor {
     pub fn insert(&mut self, ray: &Ray, prediction: usize) -> Option<usize> {
         let key = hash(ray);
         self.prediction_table.insert(key, prediction)
+    }
+}
+
+impl Drop for Predictor {
+    fn drop(&mut self) {
+        eprintln!("Statistics for BVH/Predictor {:?}", self.id);
+        eprintln!(
+            "True positive predictions:  {}",
+            self.true_positive_predictions
+        );
+        eprintln!(
+            "False positive predictions: {}",
+            self.false_positive_predictions
+        );
+        eprintln!("No predictions:             {}", self.no_predictions);
+        eprintln!(
+            "Table size (number entries): {}",
+            self.prediction_table.len()
+        );
+        eprintln!("\n");
     }
 }
 
