@@ -48,7 +48,7 @@ impl Renderer {
         max_depth: u32,
         tile_width: usize,
         tile_height: usize,
-        predictors: Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> std::io::Result<()> {
         let stderr = io::stderr();
         let mut stderr_buf_writer = io::BufWriter::new(stderr);
@@ -132,7 +132,7 @@ impl Renderer {
         max_depth: u32,
         camera: &Camera,
         background: Vec3,
-        predictors: Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Srgb {
         let mut color_accumulator = Vec3::ZERO;
         for _ in 0..samples_per_pixel {

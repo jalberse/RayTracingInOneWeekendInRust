@@ -52,7 +52,7 @@ impl Hittable for Sphere {
         ray: &Ray,
         t_min: f32,
         t_max: f32,
-        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        _predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         let direction = DVec3::new(
             ray.direction.x as f64,

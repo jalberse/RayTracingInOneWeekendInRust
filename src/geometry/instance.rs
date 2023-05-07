@@ -34,7 +34,7 @@ impl Hittable for Translate {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         let offset_ray = Ray::new(ray.origin - self.displacement, ray.direction, ray.time);
         let mut hit_record = self.hittable.hit(&offset_ray, t_min, t_max, predictors)?;
@@ -116,7 +116,7 @@ impl Hittable for RotateY {
         ray: &Ray,
         t_min: f32,
         t_max: f32,
-        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<crate::hittable::HitRecord> {
         let origin = self.get_rotated_dvec(&ray.origin);
         let direction = self.get_rotated_dvec(&ray.direction);

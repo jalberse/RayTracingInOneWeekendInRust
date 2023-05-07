@@ -162,7 +162,7 @@ fn main() {
             max_depth,
             cli.tile_width,
             cli.tile_height,
-            predictors,
+            &predictors,
         )
         .unwrap();
 
@@ -170,7 +170,7 @@ fn main() {
     eprintln!("Render time: {:?}", duration);
 }
 
-fn random_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
+fn random_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
     let mut world = HittableList::new();
 
     let material_ground = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
@@ -238,7 +238,7 @@ fn random_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor
     (world, Arc::new(None))
 }
 
-fn random_moving_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
+fn random_moving_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
     let mut world = HittableList::new();
 
     let material_ground = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
@@ -308,7 +308,7 @@ fn random_moving_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Pr
     (world, Arc::new(None))
 }
 
-fn two_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
+fn two_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
     let mut world = HittableList::new();
     let checkerboard = Arc::new(Lambertian::new(Arc::new(Checker::from_color(
         10.0,
@@ -330,7 +330,7 @@ fn two_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>
     (world, Arc::new(None))
 }
 
-fn two_marble_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
+fn two_marble_spheres() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
     let mut world = HittableList::new();
 
     let marble_texture = Arc::new(Marble::new(4.0));
@@ -353,7 +353,7 @@ fn two_marble_spheres() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predi
 // Ideally, the image file (and other file resources) would be specified by a scene defined in some file (in JSON, maybe)
 // and we wouldn't be defining sample scenes via code like this at all (we would provide sample scenes as separate files
 // and would just use Shimmer to parse and render the provided scene).
-fn earth() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
+fn earth() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
     let earth_texture = Arc::new(ImageTexture::new(Path::new("images/earthmap.jpg")));
     let earth_surface = Arc::new(Lambertian::new(earth_texture));
     let globe = Arc::new(Sphere::new(vec3(0.0, 0.0, 0.0), 2.0, earth_surface));
@@ -362,7 +362,7 @@ fn earth() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
     (world, Arc::new(None))
 }
 
-fn simple_lights() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
+fn simple_lights() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
     let mut world = HittableList::new();
     let marble_texture = Arc::new(Marble::new(4.0));
     let ground = Arc::new(Sphere::new(
@@ -388,7 +388,7 @@ fn simple_lights() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>
     (world, Arc::new(None))
 }
 
-fn cornell_box() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
+fn cornell_box() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
     let mut world = HittableList::new();
 
     let red = Arc::new(Lambertian::from_color(vec3(0.65, 0.05, 0.05)));
@@ -462,7 +462,7 @@ fn cornell_box() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>
     (world, Arc::new(None))
 }
 
-fn cornell_smoke() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
+fn cornell_smoke() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
     let mut world = HittableList::new();
 
     let red = Arc::new(Lambertian::from_color(vec3(0.65, 0.05, 0.05)));
@@ -544,7 +544,7 @@ fn cornell_smoke() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>
     (world, Arc::new(None))
 }
 
-fn showcase() -> (HittableList, Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>) {
+fn showcase() -> (HittableList, Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>) {
     let mut rng = rand::thread_rng();
 
     let mut boxes = HittableList::new();

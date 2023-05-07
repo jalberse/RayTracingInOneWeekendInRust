@@ -39,7 +39,7 @@ impl Hittable for XyRect {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        _predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         let t = (self.z - ray.origin.z) / ray.direction.z;
         if t < t_min || t > t_max {
@@ -101,7 +101,7 @@ impl Hittable for XzRect {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         let t = (self.y - ray.origin.y) / ray.direction.y;
         if t < t_min || t > t_max {
@@ -163,7 +163,7 @@ impl Hittable for YzRect {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        _predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         let t = (self.x - ray.origin.x) / ray.direction.x;
         if t < t_min || t > t_max {

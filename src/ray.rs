@@ -34,7 +34,7 @@ impl Ray {
         world: &HittableList,
         depth: u32,
         background: Vec3,
-        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Vec3 {
         // Ray bounce limit reached; accumulate no further light.
         if depth <= 0 {

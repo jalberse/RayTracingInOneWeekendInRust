@@ -80,7 +80,7 @@ impl Hittable for Bvh {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         // TODO Maybe it should instead be an...
         // &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>.
@@ -280,7 +280,7 @@ impl BvhNode {
         t_min: f32,
         t_max: f32,
         nodes: &[BvhNode],
-        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<crate::hittable::HitRecord> {
         if !self.bounding_box.hit(ray, t_min, t_max) {
             return None;

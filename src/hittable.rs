@@ -75,7 +75,7 @@ pub trait Hittable: Send + Sync {
         ray: &Ray,
         t_min: f32,
         t_max: f32,
-        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord>;
 
     /// Returns the bounding box of the hittable object. If the object has no bounding box
@@ -111,7 +111,7 @@ impl Hittable for HittableList {
         ray: &Ray,
         t_min: f32,
         t_max: f32,
-        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         self.objects
             .iter()
@@ -191,7 +191,7 @@ impl Hittable for ConstantMedium {
         ray: &Ray,
         t_min: f32,
         t_max: f32,
-        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         let mut hit1 = self
             .boundary

@@ -57,7 +57,7 @@ impl Hittable for MovingSphere {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-        _predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        _predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         let oc = ray.origin - self.center(ray.time);
         let a = ray.direction.length_squared();

@@ -87,7 +87,7 @@ impl Hittable for Cube {
         ray: &crate::ray::Ray,
         t_min: f32,
         t_max: f32,
-        predictors: &Arc<Option<Mutex<AHashMap<BvhId, Predictor>>>>,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
         self.sides.hit(ray, t_min, t_max, predictors)
     }
