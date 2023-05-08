@@ -61,11 +61,6 @@ impl Predictor {
         self.prediction_table.get(&key).copied()
     }
 
-    pub fn has_prediction(&self, ray: &Ray) -> bool {
-        let key = hash(ray);
-        self.prediction_table.contains_key(&key)
-    }
-
     /// See https://doc.rust-lang.org/std/collections/struct.HashMap.html#method.insert
     pub fn insert(&mut self, ray: &Ray, prediction: usize) -> Option<usize> {
         let key = hash(ray);
