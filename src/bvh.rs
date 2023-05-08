@@ -149,9 +149,8 @@ impl Hittable for Bvh {
                 // A Go Up Level of 0 predicts the acceleration structure’s leaf nodes.
                 // A Go Up Level of 1 predicts the parent node of the leaf nodes.
                 // A Go Up Level of 2 predicts the grand-parent node of the leaf nodes, etc
-                // TODO: The original HRPP paper shows a Go Up Level of 1 is most efficient, so we will hardcode it here,
-                // but in the future it might become configurable.
-                let go_up_level = 1;
+                // TODO: Determine best go-up-level. Using 0 because it's used in that table.
+                let go_up_level = 0;
                 let predicted_node_idx = {
                     let mut cur_node_idx = leaf_node_idx.0;
                     for _ in 0..go_up_level {

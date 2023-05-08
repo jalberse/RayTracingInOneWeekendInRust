@@ -84,7 +84,7 @@ impl Drop for Predictor {
             self.true_positive_predictions
         );
         eprintln!(
-            "Ratio true positive: {}",
+            "Ratio true positive:        {}",
             self.true_positive_predictions as f32 / total as f32
         );
         eprintln!(
@@ -92,12 +92,12 @@ impl Drop for Predictor {
             self.false_positive_predictions
         );
         eprintln!(
-            "Ratio false positive: {}",
+            "Ratio false positive:       {}",
             self.false_positive_predictions as f32 / total as f32
         );
         eprintln!("No predictions:             {}", self.no_predictions);
         eprintln!(
-            "Ratio no predictions: {}",
+            "Ratio no predictions:       {}",
             self.no_predictions as f32 / total as f32
         );
         eprintln!(
@@ -147,23 +147,22 @@ fn map_float_to_hash(val: f32, bit_precision: &BitPrecision) -> u16 {
 
     let mantissa_bits: u16 = (bits >> mantissa_bits_to_shift) as u16 & bits_to_mask;
 
-    sign_bit << 15 | exponent_bits << 7 | mantissa_bits
+    (sign_bit << 15) | (exponent_bits << 7) | mantissa_bits
 }
 
 pub fn hash(ray: &Ray) -> u64 {
-    // The original paper specifies that 5 is optimal, so we'll
-    // hardcode that for now. We may expand to let this be configurable.
-    let precision = BitPrecision::Five;
+    // Based on the value chosen by the paper
+    let precision = BitPrecision::Six;
 
     let hash_origin_x = map_float_to_hash(ray.origin.x, &precision) as u64;
     let hash_origin_y = map_float_to_hash(ray.origin.y, &precision) as u64;
     let hash_origin_z = map_float_to_hash(ray.origin.z, &precision) as u64;
     let hash_direction_x = map_float_to_hash(ray.direction.x, &precision) as u64;
     let hash_direction_y = map_float_to_hash(ray.direction.y, &precision) as u64;
-    let hsah_direction_z = map_float_to_hash(ray.direction.z, &precision) as u64;
+    let hash_direction_z = map_float_to_hash(ray.direction.z, &precision) as u64;
 
     // xor the hashes to save space
-    let hash_0 = hash_origin_x ^ hsah_direction_z;
+    let hash_0 = hash_origin_x ^ hash_direction_z;
     let hash_1 = hash_origin_y ^ hash_direction_y;
     let hash_2 = hash_origin_z ^ hash_direction_x;
 
