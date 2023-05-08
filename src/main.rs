@@ -6,6 +6,7 @@ use shimmer::geometry::instance::{RotateY, Translate};
 use shimmer::geometry::moving_sphere::MovingSphere;
 use shimmer::geometry::rectangle::{XyRect, XzRect, YzRect};
 use shimmer::geometry::sphere::Sphere;
+use shimmer::geometry::triangle::Tri;
 use shimmer::hittable::{ConstantMedium, HittableList};
 use shimmer::hrpp::Predictor;
 use shimmer::materials::diffuse_light::DiffuseLight;
@@ -22,6 +23,7 @@ use shimmer::textures::image_texture::ImageTexture;
 
 use clap::{Parser, ValueEnum};
 use glam::{vec3, Vec3};
+use tobj::LoadOptions;
 
 use rand::{random, Rng};
 use shimmer::textures::marble::Marble;
@@ -40,6 +42,7 @@ enum Scene {
     Cornell,
     CornellSmoke,
     Showcase,
+    Bunny,
 }
 
 #[derive(Parser)]
@@ -141,6 +144,7 @@ fn main() {
         Scene::Cornell => cornell_box(),
         Scene::CornellSmoke => cornell_smoke(),
         Scene::Showcase => showcase(),
+        Scene::Bunny => bunny(),
     };
 
     let background = match cli.scene {
@@ -148,6 +152,7 @@ fn main() {
         Scene::Cornell => Vec3::ZERO,
         Scene::CornellSmoke => Vec3::ZERO,
         Scene::Showcase => Vec3::ZERO,
+        Scene::Bunny => Vec3::ZERO,
         _ => vec3(0.70, 0.80, 1.00),
     };
 
@@ -669,6 +674,113 @@ fn showcase() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
         )),
         vec3(-100.0, 270.0, 395.0),
     )));
+
+    (world, Some(predictors))
+}
+
+fn bunny() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
+    let mut world = HittableList::new();
+
+    let red = Arc::new(Lambertian::from_color(vec3(0.65, 0.05, 0.05)));
+    let white = Arc::new(Lambertian::from_color(vec3(0.73, 0.73, 0.73)));
+    let green = Arc::new(Lambertian::from_color(vec3(0.12, 0.45, 0.15)));
+    let light = Arc::new(DiffuseLight::from_color(vec3(15.0, 15.0, 15.0)));
+
+    world.add(Arc::new(XzRect::new(
+        200.0, 356.0, 200.0, 359.0, 554.0, light,
+    )));
+
+    world.add(Arc::new(YzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        green.clone(),
+    )));
+    world.add(Arc::new(YzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        0.0,
+        red.clone(),
+    )));
+
+    world.add(Arc::new(XzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        0.0,
+        white.clone(),
+    )));
+    world.add(Arc::new(XzRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        white.clone(),
+    )));
+    world.add(Arc::new(XyRect::new(
+        0.0,
+        555.0,
+        0.0,
+        555.0,
+        555.0,
+        white.clone(),
+    )));
+
+    let load_options = LoadOptions {
+        triangulate: true,
+        ..Default::default()
+    };
+    let (models, _) = tobj::load_obj("models/bunny_2000_scale.obj", &load_options)
+        .expect("Failed to OBJ load file");
+
+    let model = &models[0];
+    let mesh = &model.mesh;
+    let indices = &mesh.indices;
+
+    let vertices: Vec<Vec3> = indices
+        .into_iter()
+        .map(|i| {
+            let x = mesh.positions[*i as usize * 3];
+            let y = mesh.positions[*i as usize * 3 + 1];
+            let z = mesh.positions[*i as usize * 3 + 2];
+            vec3(x, y, z)
+        })
+        .collect();
+
+    let tris: Vec<Tri> = vertices
+        .as_slice()
+        .chunks(3)
+        .into_iter()
+        .map(|vertex_group| {
+            Tri::new(
+                vertex_group[0],
+                vertex_group[1],
+                vertex_group[2],
+                white.clone(),
+            )
+        })
+        .collect();
+
+    let mut bunny = HittableList::new();
+    for tri in tris {
+        bunny.add(Arc::new(tri));
+    }
+
+    let mut predictors = AHashMap::<BvhId, Mutex<Predictor>>::new();
+    let bunny = Bvh::with_predictor(bunny, 0.0, 1.0, &mut predictors);
+    let bunny = Arc::new(Translate::new(Arc::new(bunny), vec3(325.0, 0.0, 200.0)));
+    world.add(bunny);
+
+    // Put the whole scene into a BVH
+    /* let world_bvh = Bvh::new(world, 0.0, 1.0);
+    let mut world = HittableList::new();
+    world.add(Arc::new(world_bvh)); */
 
     (world, Some(predictors))
 }

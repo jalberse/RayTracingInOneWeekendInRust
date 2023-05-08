@@ -105,20 +105,16 @@ impl Hittable for HittableList {
         t_max: f32,
         predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Option<HitRecord> {
-        self.objects
-            .iter()
-            .fold(None, |closest_yet, object| -> Option<HitRecord> {
-                let closest_t = if let Some(closest) = &closest_yet {
-                    closest.t
-                } else {
-                    t_max
-                };
-                if let Some(hit) = object.hit(&ray, t_min, closest_t, &predictors) {
-                    Some(hit)
-                } else {
-                    closest_yet
-                }
-            })
+        let mut closest_so_far = t_max;
+        let mut out_hit_record: Option<HitRecord> = None;
+        for object in &self.objects {
+            let hit_record = object.hit(ray, t_min, closest_so_far, predictors);
+            if let Some(hit_record) = hit_record {
+                closest_so_far = hit_record.t;
+                out_hit_record = Some(hit_record);
+            }
+        }
+        out_hit_record
     }
 
     /// Returns the bounding box encompassing all objects in the HittableList.

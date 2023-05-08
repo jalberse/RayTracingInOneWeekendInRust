@@ -75,16 +75,31 @@ impl Predictor {
 
 impl Drop for Predictor {
     fn drop(&mut self) {
+        let total =
+            self.true_positive_predictions + self.false_positive_predictions + self.no_predictions;
         eprintln!("Statistics for BVH/Predictor {:?}", self.id);
+        eprintln!("Total rays into BVH::hit(): {}", total);
         eprintln!(
             "True positive predictions:  {}",
             self.true_positive_predictions
         );
         eprintln!(
+            "Ratio true positive: {}",
+            self.true_positive_predictions as f32 / total as f32
+        );
+        eprintln!(
             "False positive predictions: {}",
             self.false_positive_predictions
         );
+        eprintln!(
+            "Ratio false positive: {}",
+            self.false_positive_predictions as f32 / total as f32
+        );
         eprintln!("No predictions:             {}", self.no_predictions);
+        eprintln!(
+            "Ratio no predictions: {}",
+            self.no_predictions as f32 / total as f32
+        );
         eprintln!(
             "Table size (number entries): {}",
             self.prediction_table.len()
