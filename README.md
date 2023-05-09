@@ -1,10 +1,12 @@
 # Ray Tracing in One Weekend, In Rust
 
-![Sample Render](images/showcase.png)
+![Sample Render](images/buddha.png)
 
 This repository is a CPU-bound ray tracing library based on Peter Shirley's books on the topic.
 
-It adds some additional features such as parallel and tiled rendering. It further makes changes from the books to achieve more idiomatic Rust code where possible.
+It adds some additional features such as parallel and tiled rendering. I also use it for some ray tracing experiments, such as implementing [hash-based ray path prediction](https://arxiv.org/pdf/1910.01304.pdf) for skipping acceleration structure traversals.
+
+It further makes changes from the books to achieve more idiomatic Rust code where possible.
 
 # Features
 
@@ -25,6 +27,7 @@ It adds some additional features such as parallel and tiled rendering. It furthe
 * Performance
   * BVH (Bounding Volume Hierarchy) implementation for fast ray collisions.
   * Multi-threaded, tiled rendering
+  * Hash-based ray path prediction (experimental)
 * Camera
   * Depth of Field
   * Shutter Speed
@@ -36,6 +39,9 @@ For more details on how to use this crate, run `cargo doc --open` in the cloned 
 The binary provides a command line interface to rendering sample scenes. To install, while in the cloned repository, use `cargo install --path .`. Then use `shimmer --help` for more informtion. Or, skip installation and run `cargo run -- --help`.
 
 # Sample Renders
+
+![Sample Render](images/showcase.png)
+A variety of materials.
 
 ![Constant Density Mediums](images/smoke.png)
 

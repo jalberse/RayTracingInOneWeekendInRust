@@ -19,6 +19,8 @@ pub struct BvhId(Uuid);
 #[derive(Copy, Clone, Eq, Hash, PartialEq)]
 struct LeafNodeIdx(usize);
 
+const GO_UP_LEVEL: u32 = 0;
+
 // Note that there are various crates for e.g. Arena-backed trees (as opposed to Vec-backed trees)
 // which e.g. ensure that references are not invalidated when nodes are deleted and so on.
 // However, we know that the Bvh will not change once constructed, so this simple approach
@@ -37,6 +39,7 @@ pub struct Bvh {
     id: BvhId,
     root_index: usize,
     nodes: Vec<BvhNode>,
+    max_depth: u32,
 }
 
 impl Bvh {
@@ -47,10 +50,14 @@ impl Bvh {
         let mut nodes = Vec::with_capacity(list.objects.len() * 2 + 1);
         let id = BvhId(Uuid::new_v4());
         let root_index = BvhNode::new(list, time_0, time_1, &mut nodes);
+
+        let max_depth = nodes[root_index].max_depth(&nodes);
+
         Bvh {
             id,
             root_index,
             nodes,
+            max_depth,
         }
     }
 
@@ -164,7 +171,7 @@ impl Hittable for Bvh {
                         Some(hit_rec_and_leaf_node) => {
                             let (_, leaf_node) = hit_rec_and_leaf_node;
 
-                            let predicted_node_idx = self.go_up_level(leaf_node.0, 0);
+                            let predicted_node_idx = self.go_up_level(leaf_node.0, GO_UP_LEVEL);
 
                             // Add the predicted node to the table
                             let mut predictor = predictor_mtx.lock().unwrap();
@@ -193,7 +200,7 @@ impl Hittable for Bvh {
 
                 // Get the prediction index
                 assert!(self.nodes[leaf_node_idx.0].parent.is_some());
-                let predicted_node_idx = self.go_up_level(leaf_node_idx.0, 0);
+                let predicted_node_idx = self.go_up_level(leaf_node_idx.0, GO_UP_LEVEL);
 
                 // Insert prediction into table
                 let mut predictor = predictor_mtx.lock().unwrap();
@@ -214,7 +221,7 @@ impl Hittable for Bvh {
 impl Drop for Bvh {
     fn drop(&mut self) {
         eprintln!("BVH id: {}", self.id.0);
-        eprintln!("BVH height: {}", self.nodes.len().ilog2());
+        eprintln!("BVH height: {}", self.max_depth);
         eprintln!("\n")
     }
 }
@@ -323,6 +330,23 @@ impl BvhNode {
         nodes.push(new_node);
 
         new_node_idx
+    }
+
+    fn max_depth(&self, nodes: &[BvhNode]) -> u32 {
+        let left_depth = match self.left {
+            Child::Index(i) => nodes[i].max_depth(nodes),
+            Child::Hittable(_) => 0,
+        };
+        let right_depth = match self.right {
+            Child::Index(i) => nodes[i].max_depth(nodes),
+            Child::Hittable(_) => 0,
+        };
+
+        if left_depth > right_depth {
+            left_depth + 1
+        } else {
+            right_depth + 1
+        }
     }
 
     fn bounding_box(&self, _time_0: f32, _time_1: f32) -> Option<Aabb> {

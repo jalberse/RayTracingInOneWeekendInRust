@@ -173,7 +173,7 @@ fn map_float_to_hash(val: f32, bit_precision: &BitPrecision) -> u16 {
 
 pub fn hash(ray: &Ray) -> u64 {
     // Based on the value chosen by the paper
-    let precision = BitPrecision::Five;
+    let precision = BitPrecision::Six;
 
     let hash_origin_x = map_float_to_hash(ray.origin.x, &precision) as u64;
     let hash_origin_y = map_float_to_hash(ray.origin.y, &precision) as u64;

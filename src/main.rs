@@ -44,6 +44,8 @@ enum Scene {
     CornellSmoke,
     Showcase,
     Bunny,
+    Gargoyle,
+    IgeaHrpp,
 }
 
 #[derive(Parser)]
@@ -146,6 +148,8 @@ fn main() {
         Scene::CornellSmoke => cornell_smoke(),
         Scene::Showcase => showcase(),
         Scene::Bunny => bunny(),
+        Scene::Gargoyle => gargoyle(),
+        Scene::IgeaHrpp => igea_hrpp(),
     };
 
     let background = match cli.scene {
@@ -154,6 +158,8 @@ fn main() {
         Scene::CornellSmoke => Vec3::ZERO,
         Scene::Showcase => Vec3::ZERO,
         Scene::Bunny => Vec3::ZERO,
+        Scene::Gargoyle => Vec3::ZERO,
+        Scene::IgeaHrpp => Vec3::ZERO,
         _ => vec3(0.70, 0.80, 1.00),
     };
 
@@ -736,7 +742,7 @@ fn cornell_boundaries() -> HittableList {
     world
 }
 
-fn get_tris<P>(file: P, material: Arc<dyn Material>) -> HittableList
+fn load_to_tris<P>(file: P, material: Arc<dyn Material>) -> HittableList
 where
     P: AsRef<Path> + fmt::Debug,
 {
@@ -786,17 +792,38 @@ fn bunny() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     let mut world = cornell_boundaries();
 
     let white = Arc::new(Lambertian::from_color(vec3(0.73, 0.73, 0.73)));
-    let bunny = get_tris("models/bunny_2000_scale.obj", white);
+    let bunny = load_to_tris("models/bunny_2000_scale.obj", white);
 
-    let mut predictors = AHashMap::<BvhId, Mutex<Predictor>>::new();
-    let bunny = Bvh::with_predictor(bunny, 0.0, 1.0, &mut predictors);
+    let bunny = Bvh::new(bunny, 0.0, 1.0);
     let bunny = Arc::new(Translate::new(Arc::new(bunny), vec3(325.0, 0.0, 200.0)));
     world.add(bunny);
 
-    // Put the whole scene into a BVH
-    /* let world_bvh = Bvh::new(world, 0.0, 1.0);
-    let mut world = HittableList::new();
-    world.add(Arc::new(world_bvh)); */
+    (world, None)
+}
+
+fn gargoyle() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
+    let mut world = cornell_boundaries();
+
+    let white = Arc::new(Lambertian::from_color(vec3(0.73, 0.73, 0.73)));
+    let garg = load_to_tris("models/gargoyle.obj", white);
+
+    let garg = Bvh::new(garg, 0.0, 1.0);
+    let garg = Arc::new(Translate::new(Arc::new(garg), vec3(275.0, 0.0, 200.0)));
+    world.add(garg);
+
+    (world, None)
+}
+
+fn igea_hrpp() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
+    let mut world = cornell_boundaries();
+
+    let white = Arc::new(Lambertian::from_color(vec3(0.73, 0.73, 0.73)));
+    let igea = load_to_tris("models/igea.obj", white);
+
+    let mut predictors = AHashMap::<BvhId, Mutex<Predictor>>::new();
+    let igea = Bvh::with_predictor(igea, 0.0, 1.0, &mut predictors);
+    let igea = Arc::new(Translate::new(Arc::new(igea), vec3(275.0, 0.0, 200.0)));
+    world.add(igea);
 
     (world, Some(predictors))
 }
