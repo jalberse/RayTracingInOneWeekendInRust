@@ -27,6 +27,7 @@ use tobj::LoadOptions;
 
 use rand::{random, Rng};
 use shimmer::textures::marble::Marble;
+use std::fmt;
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -678,7 +679,7 @@ fn showcase() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     (world, Some(predictors))
 }
 
-fn bunny() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
+fn cornell_boundaries() -> HittableList {
     let mut world = HittableList::new();
 
     let red = Arc::new(Lambertian::from_color(vec3(0.65, 0.05, 0.05)));
@@ -732,12 +733,18 @@ fn bunny() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
         white.clone(),
     )));
 
+    world
+}
+
+fn get_tris<P>(file: P, material: Arc<dyn Material>) -> HittableList
+where
+    P: AsRef<Path> + fmt::Debug,
+{
     let load_options = LoadOptions {
         triangulate: true,
         ..Default::default()
     };
-    let (models, _) = tobj::load_obj("models/bunny_2000_scale.obj", &load_options)
-        .expect("Failed to OBJ load file");
+    let (models, _) = tobj::load_obj(file, &load_options).expect("Failed to OBJ load file");
 
     let model = &models[0];
     let mesh = &model.mesh;
@@ -762,7 +769,7 @@ fn bunny() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
                 vertex_group[0],
                 vertex_group[1],
                 vertex_group[2],
-                white.clone(),
+                material.clone(),
             )
         })
         .collect();
@@ -771,6 +778,15 @@ fn bunny() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
     for tri in tris {
         bunny.add(Arc::new(tri));
     }
+
+    bunny
+}
+
+fn bunny() -> (HittableList, Option<AHashMap<BvhId, Mutex<Predictor>>>) {
+    let mut world = cornell_boundaries();
+
+    let white = Arc::new(Lambertian::from_color(vec3(0.73, 0.73, 0.73)));
+    let bunny = get_tris("models/bunny_2000_scale.obj", white);
 
     let mut predictors = AHashMap::<BvhId, Mutex<Predictor>>::new();
     let bunny = Bvh::with_predictor(bunny, 0.0, 1.0, &mut predictors);
