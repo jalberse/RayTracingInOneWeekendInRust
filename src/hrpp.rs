@@ -3,7 +3,7 @@
 //! See https://arxiv.org/abs/1910.01304
 //! Hash-Based Ray Path Prediction: Skipping BVH Traversal Computation by Exploiting Ray Locality
 
-use ahash::AHashMap;
+use ahash::{AHashMap, AHashSet};
 
 use crate::{bvh::BvhId, ray::Ray};
 
@@ -33,7 +33,7 @@ enum BitPrecision {
 pub struct Predictor {
     id: BvhId,
     // Maps the result of hash(ray) to the index of the predicted node for that hash.
-    prediction_table: AHashMap<u64, usize>,
+    prediction_table: AHashMap<u64, AHashSet<usize>>,
     // TODO it would be better to store statistics outside of the predictor, so we don't need
     //  to lock access to the predictor just to increment these stats.
     //  But we can just comment out stat collection if we want to test wall clock time etc...
@@ -56,15 +56,29 @@ impl Predictor {
 
     /// Returns the prediction if there is one.
     /// If there is no prediction for this ray, returns None.
-    pub fn get_prediction(&self, ray: &Ray) -> Option<usize> {
+    pub fn get_predictions(&self, ray: &Ray) -> Option<&AHashSet<usize>> {
         let key = hash(ray);
-        self.prediction_table.get(&key).copied()
+        self.prediction_table.get(&key)
     }
 
-    /// See https://doc.rust-lang.org/std/collections/struct.HashMap.html#method.insert
-    pub fn insert(&mut self, ray: &Ray, prediction: usize) -> Option<usize> {
+    pub fn insert(&mut self, ray: &Ray, prediction: usize) {
+        // TODO Likely limit size of set to 5, that's what original implementation does.
+        // TODO I think that the cloning about this isn't great, but these should be small sets so, I'll accept it for now.
+
         let key = hash(ray);
-        self.prediction_table.insert(key, prediction)
+        let set_maybe = self.prediction_table.get(&key);
+        if let Some(set) = set_maybe {
+            // There was an entry for this hash;
+            // add this predicted node to the set of predicted nodes for this hash.
+            let mut new_set = set.clone();
+            new_set.insert(prediction);
+            self.prediction_table.insert(key, new_set);
+        } else {
+            // There was no entry in the predictor table for this hash; add it.
+            let mut set = AHashSet::new();
+            set.insert(prediction);
+            self.prediction_table.insert(key, set);
+        }
     }
 }
 
@@ -99,6 +113,18 @@ impl Drop for Predictor {
             "Table size (number entries): {}",
             self.prediction_table.len()
         );
+
+        let mut num_leaf_nodes = 0;
+        for row in self.prediction_table.iter() {
+            let (_, set) = row;
+            num_leaf_nodes += set.len();
+        }
+        let avg_num_leaf_nodes = num_leaf_nodes as f64 / self.prediction_table.len() as f64;
+        eprintln!(
+            "Average number of leaf nodes per hash: {}",
+            avg_num_leaf_nodes
+        );
+
         eprintln!("\n");
     }
 }
@@ -147,7 +173,7 @@ fn map_float_to_hash(val: f32, bit_precision: &BitPrecision) -> u16 {
 
 pub fn hash(ray: &Ray) -> u64 {
     // Based on the value chosen by the paper
-    let precision = BitPrecision::Six;
+    let precision = BitPrecision::Five;
 
     let hash_origin_x = map_float_to_hash(ray.origin.x, &precision) as u64;
     let hash_origin_y = map_float_to_hash(ray.origin.y, &precision) as u64;

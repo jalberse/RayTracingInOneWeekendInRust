@@ -72,6 +72,24 @@ impl Bvh {
 
         bvh
     }
+
+    // Goes up the tree from the specified node, go_up_level times
+    // If the top of the tree is reached, returns the top of the tree
+    fn go_up_level(&self, start_node: usize, go_up_level: u32) -> usize {
+        // HRPP’s go up level as the level in the acceleration structure tree the predictor table predicts.
+        // A Go Up Level of 0 predicts the acceleration structure’s leaf nodes.
+        // A Go Up Level of 1 predicts the parent node of the leaf nodes.
+        // A Go Up Level of 2 predicts the grand-parent node of the leaf nodes, etc
+        let mut cur_node_idx = start_node;
+        for _ in 0..go_up_level {
+            if let Some(parent) = self.nodes[cur_node_idx].parent {
+                cur_node_idx = parent;
+            } else {
+                return cur_node_idx;
+            }
+        }
+        cur_node_idx
+    }
 }
 
 impl Hittable for Bvh {
@@ -94,39 +112,67 @@ impl Hittable for Bvh {
 
         if let Some(predictor_mtx) = this_bvh_predictor_maybe {
             let predictor = predictor_mtx.lock().unwrap();
-            let predicted_node_idx = predictor.get_prediction(ray);
+            let predicted_node_idx = predictor.get_predictions(ray).cloned();
             drop(predictor);
 
-            if let Some(predicted_node_idx) = predicted_node_idx {
-                // We have a prediction for this ray.
-                let hit_record_and_leaf_node =
-                    self.nodes[predicted_node_idx].hit(ray, t_min, t_max, &self.nodes, &predictors);
-                if let Some(hit_record_and_leaf_node) = hit_record_and_leaf_node {
-                    // A true postive - the ray DID hit something within the predicted node.
+            if let Some(predicted_node_indices) = predicted_node_idx {
+                // We have a prediction(s) for this ray.
+                // Find the closest hit within the predicted nodes.
+
+                let mut closest_so_far = t_max;
+                let mut closest_hit_record_and_leaf_node = None;
+                for predicted_index in predicted_node_indices.into_iter() {
+                    let hit_record_and_leaf_node = self.nodes[predicted_index].hit(
+                        ray,
+                        t_min,
+                        closest_so_far,
+                        &self.nodes,
+                        &predictors,
+                    );
+                    if let Some(hit_record_and_leaf_node) = hit_record_and_leaf_node {
+                        closest_so_far = hit_record_and_leaf_node.0.t;
+                        closest_hit_record_and_leaf_node = Some(hit_record_and_leaf_node);
+                    }
+                }
+
+                if let Some(hit_record_and_leaf_node) = closest_hit_record_and_leaf_node {
+                    // A true postive - the ray DID hit something within the predicted node(s).
                     // This is the best case outcome - we can use this result, thereby skipping traversal up to the predicted node.
                     // This case can result in the wrong visual output, however, where the ray does not find the closest intersection
                     // that may lie in a different node. See 4.3 of https://arxiv.org/abs/1910.01304
 
-                    // TODO Comment this out when I'm not interested in collecting statistics. Unnecessary locks.
+                    // Update stats
                     let mut predictor = predictor_mtx.lock().unwrap();
                     predictor.true_positive_predictions += 1;
                     drop(predictor);
 
                     return Some(hit_record_and_leaf_node.0);
                 } else {
-                    // A false positive - the ray did not hit anything within the predicted node.
+                    // A false positive - the ray did not hit anything within the predicted node(s).
                     // Go back and traverse the tree from the root.
                     // A replacement policy here instead might improve HRPP performance.
 
-                    // TODO Comment this out when I'm not interested in collecting statistics. Unnecessary locks.
+                    // Update stats
                     let mut predictor = predictor_mtx.lock().unwrap();
                     predictor.false_positive_predictions += 1;
                     drop(predictor);
 
                     let hit_rec_and_leaf_node =
                         self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, predictors);
+
                     return match hit_rec_and_leaf_node {
-                        Some(hit_rec_and_leaf_node) => Some(hit_rec_and_leaf_node.0),
+                        Some(hit_rec_and_leaf_node) => {
+                            let (_, leaf_node) = hit_rec_and_leaf_node;
+
+                            let predicted_node_idx = self.go_up_level(leaf_node.0, 0);
+
+                            // Add the predicted node to the table
+                            let mut predictor = predictor_mtx.lock().unwrap();
+                            predictor.insert(ray, predicted_node_idx);
+                            drop(predictor);
+
+                            Some(hit_rec_and_leaf_node.0)
+                        }
                         None => None,
                     };
                 }
@@ -134,7 +180,7 @@ impl Hittable for Bvh {
                 // No prediction for this ray.
                 // Find a hit_record via regular traversal, and then add a prediction to the table for this ray.
 
-                // TODO Comment this out when I'm not interested in collecting statistics. Unnecessary locks.
+                // update stats
                 let mut predictor = predictor_mtx.lock().unwrap();
                 predictor.no_predictions += 1;
                 drop(predictor);
@@ -145,21 +191,11 @@ impl Hittable for Bvh {
 
                 // We will return the hit record, but first add a prediction to the table for this ray.
 
-                // HRPP’s go up level as the level in the acceleration structure tree the predictor table predicts.
-                // A Go Up Level of 0 predicts the acceleration structure’s leaf nodes.
-                // A Go Up Level of 1 predicts the parent node of the leaf nodes.
-                // A Go Up Level of 2 predicts the grand-parent node of the leaf nodes, etc
-                // TODO: Determine best go-up-level. Using 0 because it's used in that table.
-                let go_up_level = 0;
-                let predicted_node_idx = {
-                    let mut cur_node_idx = leaf_node_idx.0;
-                    for _ in 0..go_up_level {
-                        assert!(self.nodes[leaf_node_idx.0].parent.is_some());
-                        cur_node_idx = self.nodes[leaf_node_idx.0].parent?;
-                    }
-                    cur_node_idx
-                };
+                // Get the prediction index
+                assert!(self.nodes[leaf_node_idx.0].parent.is_some());
+                let predicted_node_idx = self.go_up_level(leaf_node_idx.0, 0);
 
+                // Insert prediction into table
                 let mut predictor = predictor_mtx.lock().unwrap();
                 predictor.insert(&ray, predicted_node_idx);
                 drop(predictor);
@@ -172,6 +208,14 @@ impl Hittable for Bvh {
                 self.nodes[self.root_index].hit(ray, t_min, t_max, &self.nodes, &predictors)?;
             Some(hit_record)
         }
+    }
+}
+
+impl Drop for Bvh {
+    fn drop(&mut self) {
+        eprintln!("BVH id: {}", self.id.0);
+        eprintln!("BVH height: {}", self.nodes.len().ilog2());
+        eprintln!("\n")
     }
 }
 
