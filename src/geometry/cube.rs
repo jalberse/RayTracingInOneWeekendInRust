@@ -1,23 +1,26 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
-use glam::DVec3;
+use ahash::AHashMap;
+use glam::Vec3;
 
 use crate::{
     aabb::Aabb,
-    hittable::{Hittable, HittableList},
+    bvh::BvhId,
+    hittable::{HitRecord, Hittable, HittableList},
+    hrpp::Predictor,
     materials::material::Material,
 };
 
 use super::rectangle::{XyRect, XzRect, YzRect};
 
 pub struct Cube {
-    min_point: DVec3,
-    max_point: DVec3,
+    min_point: Vec3,
+    max_point: Vec3,
     sides: HittableList,
 }
 
 impl Cube {
-    pub fn new(min_point: DVec3, max_point: DVec3, material: Arc<dyn Material>) -> Self {
+    pub fn new(min_point: Vec3, max_point: Vec3, material: Arc<dyn Material>) -> Self {
         let mut sides = HittableList::new();
         sides.add(Arc::new(XyRect::new(
             min_point.x,
@@ -82,13 +85,14 @@ impl Hittable for Cube {
     fn hit(
         &self,
         ray: &crate::ray::Ray,
-        t_min: f64,
-        t_max: f64,
-    ) -> Option<crate::hittable::HitRecord> {
-        self.sides.hit(ray, t_min, t_max)
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
+    ) -> Option<HitRecord> {
+        self.sides.hit(ray, t_min, t_max, predictors)
     }
 
-    fn bounding_box(&self, _time_0: f64, _time_1: f64) -> Option<crate::aabb::Aabb> {
+    fn bounding_box(&self, _time_0: f32, _time_1: f32) -> Option<crate::aabb::Aabb> {
         Some(Aabb::new(self.min_point, self.max_point))
     }
 }

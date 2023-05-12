@@ -3,6 +3,7 @@ pub mod bvh;
 pub mod camera;
 pub mod geometry;
 pub mod hittable;
+pub mod hrpp;
 pub mod materials;
 mod ray;
 pub mod renderer;

@@ -1,16 +1,21 @@
 use std::io;
 use std::io::Write;
+use std::sync::Arc;
+use std::sync::Mutex;
 
-use glam::DVec3;
+use ahash::AHashMap;
+use glam::Vec3;
 use indicatif::ParallelProgressIterator;
 use palette::Pixel;
 use palette::Srgb;
 use rand::random;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
+use crate::bvh::BvhId;
 use crate::camera::Camera;
 use crate::hittable::HittableList;
-use crate::utils::srgb_from_dvec3;
+use crate::hrpp::Predictor;
+use crate::utils::srgb_from_vec3;
 
 pub struct Renderer {
     image_width: usize,
@@ -26,10 +31,10 @@ impl Renderer {
         }
     }
 
-    pub fn from_aspect_ratio(image_width: usize, aspect_ratio: f64) -> Renderer {
+    pub fn from_aspect_ratio(image_width: usize, aspect_ratio: f32) -> Renderer {
         Renderer {
             image_width,
-            image_height: (image_width as f64 / aspect_ratio) as usize,
+            image_height: (image_width as f32 / aspect_ratio) as usize,
         }
     }
 
@@ -38,17 +43,20 @@ impl Renderer {
         &self,
         camera: &Camera,
         world: &HittableList,
-        background: DVec3,
+        background: Vec3,
         samples_per_pixel: u32,
         max_depth: u32,
         tile_width: usize,
         tile_height: usize,
+        predictors: Option<AHashMap<BvhId, Mutex<Predictor>>>,
     ) -> std::io::Result<()> {
         let stderr = io::stderr();
         let mut stderr_buf_writer = io::BufWriter::new(stderr);
 
         let tiles = Tile::tile(self.image_width, self.image_height, tile_width, tile_height);
         let mut colors = ImageColors::new(self.image_width, self.image_height);
+
+        let predictors = Arc::new(predictors);
 
         write!(stderr_buf_writer, "Rendering tiles...\n")?;
         stderr_buf_writer.flush().unwrap();
@@ -67,6 +75,7 @@ impl Renderer {
                             max_depth,
                             camera,
                             background,
+                            predictors.clone(),
                         );
                         tile_colors.set_color(&PixelCoordinates::new(x, y), color);
                     }
@@ -124,18 +133,19 @@ impl Renderer {
         world: &HittableList,
         max_depth: u32,
         camera: &Camera,
-        background: DVec3,
+        background: Vec3,
+        predictors: Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
     ) -> Srgb {
-        let mut color_accumulator = DVec3::ZERO;
+        let mut color_accumulator = Vec3::ZERO;
         for _ in 0..samples_per_pixel {
-            let u = (pixel_coords.x as f64 + random::<f64>()) / (self.image_width - 1) as f64;
-            let v = (pixel_coords.y as f64 + random::<f64>()) / (self.image_height - 1) as f64;
+            let u = (pixel_coords.x as f32 + random::<f32>()) / (self.image_width - 1) as f32;
+            let v = (pixel_coords.y as f32 + random::<f32>()) / (self.image_height - 1) as f32;
             let ray = camera.get_ray(u, v);
 
-            color_accumulator += ray.ray_color(&world, max_depth, background);
+            color_accumulator += ray.ray_color(&world, max_depth, background, &predictors);
         }
-        let color = color_accumulator / samples_per_pixel as f64;
-        srgb_from_dvec3(color)
+        let color = color_accumulator / samples_per_pixel as f32;
+        srgb_from_vec3(color)
     }
 }
 

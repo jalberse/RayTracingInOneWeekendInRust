@@ -1,21 +1,25 @@
-use std::{ops::Neg, sync::Arc};
+use std::{
+    ops::Neg,
+    sync::{Arc, Mutex},
+};
 
-use glam::DVec3;
+use ahash::AHashMap;
+use glam::Vec3;
 use rand::Rng;
 
 use crate::{
-    aabb::Aabb, materials::isotropic::Isotropic, materials::material::Material, ray::Ray,
-    textures::texture::Texture,
+    aabb::Aabb, bvh::BvhId, hrpp::Predictor, materials::isotropic::Isotropic,
+    materials::material::Material, ray::Ray, textures::texture::Texture,
 };
 
 pub struct HitRecord {
-    pub point: DVec3,
-    pub normal: DVec3,
-    pub t: f64,
+    pub point: Vec3,
+    pub normal: Vec3,
+    pub t: f32,
     /// Texture u coordiante
-    pub u: f64,
+    pub u: f32,
     /// Texture v coordinate
-    pub v: f64,
+    pub v: f32,
     pub front_face: bool,
     pub material: Arc<dyn Material>,
 }
@@ -23,10 +27,10 @@ pub struct HitRecord {
 impl HitRecord {
     pub fn new(
         ray: &Ray,
-        outward_normal: DVec3,
-        t: f64,
-        u: f64,
-        v: f64,
+        outward_normal: Vec3,
+        t: f32,
+        u: f32,
+        v: f32,
         material: Arc<dyn Material>,
     ) -> HitRecord {
         let point = ray.at(t);
@@ -47,7 +51,7 @@ impl HitRecord {
         }
     }
 
-    pub fn set_face_normal(&mut self, ray: &Ray, outward_normal: DVec3) {
+    pub fn set_face_normal(&mut self, ray: &Ray, outward_normal: Vec3) {
         let front_face = ray.direction.dot(outward_normal) < 0.0;
         self.normal = if front_face {
             outward_normal
@@ -58,7 +62,13 @@ impl HitRecord {
 }
 
 pub trait Hittable: Send + Sync {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord>;
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
+    ) -> Option<HitRecord>;
 
     /// Returns the bounding box of the hittable object. If the object has no bounding box
     /// (because it is an infinite plane, for example), None is returned.
@@ -68,7 +78,7 @@ pub trait Hittable: Send + Sync {
     /// * `time_0`, `time_1` - If the object moves, the bounding box will encompass its
     /// full range of motion between `time_0` and `time_1`. If the object does not move,
     /// these values have no effect on the bounding box.
-    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb>;
+    fn bounding_box(&self, time_0: f32, time_1: f32) -> Option<Aabb>;
 }
 
 pub struct HittableList {
@@ -88,27 +98,29 @@ impl HittableList {
 }
 
 impl Hittable for HittableList {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
-        self.objects
-            .iter()
-            .fold(None, |closest_yet, object| -> Option<HitRecord> {
-                let closest_t = if let Some(closest) = &closest_yet {
-                    closest.t
-                } else {
-                    t_max
-                };
-                if let Some(hit) = object.hit(&ray, t_min, closest_t) {
-                    Some(hit)
-                } else {
-                    closest_yet
-                }
-            })
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
+    ) -> Option<HitRecord> {
+        let mut closest_so_far = t_max;
+        let mut out_hit_record: Option<HitRecord> = None;
+        for object in &self.objects {
+            let hit_record = object.hit(ray, t_min, closest_so_far, predictors);
+            if let Some(hit_record) = hit_record {
+                closest_so_far = hit_record.t;
+                out_hit_record = Some(hit_record);
+            }
+        }
+        out_hit_record
     }
 
     /// Returns the bounding box encompassing all objects in the HittableList.
     /// Returns None if any object in the list does not have a bounding box (because
     /// it is e.g. an infinite plane)
-    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb> {
+    fn bounding_box(&self, time_0: f32, time_1: f32) -> Option<Aabb> {
         if self.objects.is_empty() {
             return None;
         }
@@ -132,13 +144,13 @@ impl Hittable for HittableList {
 pub struct ConstantMedium {
     boundary: Arc<dyn Hittable>,
     phase_function: Arc<dyn Material>,
-    neg_inv_density: f64,
+    neg_inv_density: f32,
 }
 
 impl ConstantMedium {
     pub fn new(
         boundary: Arc<dyn Hittable>,
-        density: f64,
+        density: f32,
         texture: Arc<dyn Texture>,
     ) -> ConstantMedium {
         ConstantMedium {
@@ -150,8 +162,8 @@ impl ConstantMedium {
 
     pub fn new_with_color(
         boundary: Arc<dyn Hittable>,
-        density: f64,
-        color: DVec3,
+        density: f32,
+        color: Vec3,
     ) -> ConstantMedium {
         ConstantMedium {
             boundary,
@@ -162,9 +174,19 @@ impl ConstantMedium {
 }
 
 impl Hittable for ConstantMedium {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
-        let mut hit1 = self.boundary.hit(ray, f64::NEG_INFINITY, f64::INFINITY)?;
-        let mut hit2 = self.boundary.hit(ray, hit1.t + 0.0001, f64::INFINITY)?;
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
+    ) -> Option<HitRecord> {
+        let mut hit1 = self
+            .boundary
+            .hit(ray, f32::NEG_INFINITY, f32::INFINITY, &predictors)?;
+        let mut hit2 = self
+            .boundary
+            .hit(ray, hit1.t + 0.0001, f32::INFINITY, predictors)?;
 
         if hit1.t < t_min {
             hit1.t = t_min
@@ -184,7 +206,7 @@ impl Hittable for ConstantMedium {
         let ray_length = ray.direction.length();
         let distance_inside_boundary = (hit2.t - hit1.t) * ray_length;
         let mut rng = rand::thread_rng();
-        let hit_distance = self.neg_inv_density * f64::ln(rng.gen());
+        let hit_distance = self.neg_inv_density * f32::ln(rng.gen());
 
         if hit_distance > distance_inside_boundary {
             return None;
@@ -195,7 +217,7 @@ impl Hittable for ConstantMedium {
 
         let out_hit_record = HitRecord {
             point: out_rec_point,
-            normal: DVec3::X, // Arbitrary
+            normal: Vec3::X, // Arbitrary
             t: out_rec_time,
             // Using either the first or second hit record's UVs doesn't make physical sense, nor
             // would using an interpolated U/V - we are working with volumes, not on the boundary.
@@ -210,7 +232,7 @@ impl Hittable for ConstantMedium {
         Some(out_hit_record)
     }
 
-    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<Aabb> {
+    fn bounding_box(&self, time_0: f32, time_1: f32) -> Option<Aabb> {
         self.boundary.bounding_box(time_0, time_1)
     }
 }

@@ -1,16 +1,26 @@
-use std::{ops::Neg, sync::Arc};
+use std::{
+    ops::Neg,
+    sync::{Arc, Mutex},
+};
 
-use glam::{dvec3, DVec3};
+use ahash::AHashMap;
+use glam::{vec3, Vec3};
 
-use crate::{aabb::Aabb, hittable::Hittable, ray::Ray};
+use crate::{
+    aabb::Aabb,
+    bvh::BvhId,
+    hittable::{HitRecord, Hittable},
+    hrpp::Predictor,
+    ray::Ray,
+};
 
 pub struct Translate {
     hittable: Arc<dyn Hittable>,
-    displacement: DVec3,
+    displacement: Vec3,
 }
 
 impl Translate {
-    pub fn new(hittable: Arc<dyn Hittable>, displacement: DVec3) -> Self {
+    pub fn new(hittable: Arc<dyn Hittable>, displacement: Vec3) -> Self {
         Translate {
             hittable,
             displacement,
@@ -22,16 +32,17 @@ impl Hittable for Translate {
     fn hit(
         &self,
         ray: &crate::ray::Ray,
-        t_min: f64,
-        t_max: f64,
-    ) -> Option<crate::hittable::HitRecord> {
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
+    ) -> Option<HitRecord> {
         let offset_ray = Ray::new(ray.origin - self.displacement, ray.direction, ray.time);
-        let mut hit_record = self.hittable.hit(&offset_ray, t_min, t_max)?;
+        let mut hit_record = self.hittable.hit(&offset_ray, t_min, t_max, predictors)?;
         hit_record.point += self.displacement;
         Some(hit_record)
     }
 
-    fn bounding_box(&self, time_0: f64, time_1: f64) -> Option<crate::aabb::Aabb> {
+    fn bounding_box(&self, time_0: f32, time_1: f32) -> Option<crate::aabb::Aabb> {
         let bbox = self.hittable.bounding_box(time_0, time_1)?;
 
         Some(Aabb::new(
@@ -43,21 +54,21 @@ impl Hittable for Translate {
 
 pub struct RotateY {
     hittable: Arc<dyn Hittable>,
-    sin_theta: f64,
-    cos_theta: f64,
+    sin_theta: f32,
+    cos_theta: f32,
     bbox: Option<Aabb>,
 }
 
 impl RotateY {
-    pub fn new(hittable: Arc<dyn Hittable>, degrees: f64) -> Self {
-        let radians = f64::to_radians(degrees);
+    pub fn new(hittable: Arc<dyn Hittable>, degrees: f32) -> Self {
+        let radians = f32::to_radians(degrees);
 
-        let sin_theta = f64::sin(radians);
-        let cos_theta = f64::cos(radians);
+        let sin_theta = f32::sin(radians);
+        let cos_theta = f32::cos(radians);
 
         let bbox = if let Some(bbox) = hittable.bounding_box(0.0, 1.0) {
-            let mut min = dvec3(f64::INFINITY, f64::INFINITY, f64::INFINITY);
-            let mut max = dvec3(f64::NEG_INFINITY, f64::NEG_INFINITY, f64::NEG_INFINITY);
+            let mut min = vec3(f32::INFINITY, f32::INFINITY, f32::INFINITY);
+            let mut max = vec3(f32::NEG_INFINITY, f32::NEG_INFINITY, f32::NEG_INFINITY);
             for i in [0.0, 1.0] {
                 for j in [0.0, 1.0] {
                     for k in [0.0, 1.0] {
@@ -68,11 +79,11 @@ impl RotateY {
                         let new_x = cos_theta * x + sin_theta * z;
                         let new_z = sin_theta.neg() * x + cos_theta * z;
 
-                        let tester = dvec3(new_x, y, new_z);
+                        let tester = vec3(new_x, y, new_z);
 
                         for c in 0..2 {
-                            min[c] = f64::min(min[c], tester[c]);
-                            max[c] = f64::max(max[c], tester[c]);
+                            min[c] = f32::min(min[c], tester[c]);
+                            max[c] = f32::max(max[c], tester[c]);
                         }
                     }
                 }
@@ -90,8 +101,8 @@ impl RotateY {
         }
     }
 
-    fn get_rotated_dvec(&self, vec: &DVec3) -> DVec3 {
-        DVec3::new(
+    fn get_rotated_dvec(&self, vec: &Vec3) -> Vec3 {
+        Vec3::new(
             self.cos_theta * vec[0] - self.sin_theta * vec[2],
             vec[1],
             self.sin_theta * vec[0] + self.cos_theta * vec[2],
@@ -100,20 +111,26 @@ impl RotateY {
 }
 
 impl Hittable for RotateY {
-    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<crate::hittable::HitRecord> {
+    fn hit(
+        &self,
+        ray: &Ray,
+        t_min: f32,
+        t_max: f32,
+        predictors: &Arc<Option<AHashMap<BvhId, Mutex<Predictor>>>>,
+    ) -> Option<crate::hittable::HitRecord> {
         let origin = self.get_rotated_dvec(&ray.origin);
         let direction = self.get_rotated_dvec(&ray.direction);
 
         let ray_rotated = Ray::new(origin, direction, ray.time);
 
-        let mut hit_record = self.hittable.hit(&ray_rotated, t_min, t_max)?;
+        let mut hit_record = self.hittable.hit(&ray_rotated, t_min, t_max, predictors)?;
 
-        let point = DVec3::new(
+        let point = Vec3::new(
             self.cos_theta * hit_record.point[0] + self.sin_theta * hit_record.point[2],
             hit_record.point[1],
             -self.sin_theta * hit_record.point[0] + self.cos_theta * hit_record.point[2],
         );
-        let normal = DVec3::new(
+        let normal = Vec3::new(
             self.cos_theta * hit_record.normal[0] + self.sin_theta * hit_record.normal[2],
             hit_record.normal[1],
             -self.sin_theta * hit_record.normal[0] + self.cos_theta * hit_record.normal[2],
@@ -125,7 +142,7 @@ impl Hittable for RotateY {
         Some(hit_record)
     }
 
-    fn bounding_box(&self, _time_0: f64, _time_1: f64) -> Option<Aabb> {
+    fn bounding_box(&self, _time_0: f32, _time_1: f32) -> Option<Aabb> {
         self.bbox
     }
 }

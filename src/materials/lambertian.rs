@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use glam::DVec3;
+use glam::Vec3;
 
 use crate::{
     hittable::HitRecord,
@@ -24,7 +24,7 @@ impl Lambertian {
         Lambertian { albedo }
     }
 
-    pub fn from_color(albedo: DVec3) -> Lambertian {
+    pub fn from_color(albedo: Vec3) -> Lambertian {
         Lambertian {
             albedo: Arc::new(SolidColor::new(albedo)),
         }

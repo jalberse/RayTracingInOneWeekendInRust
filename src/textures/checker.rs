@@ -1,21 +1,21 @@
 use std::sync::Arc;
 
-use glam::DVec3;
+use glam::Vec3;
 
 use super::{solid_color::SolidColor, texture::Texture};
 
 pub struct Checker {
-    scale: f64,
+    scale: f32,
     even: Arc<dyn Texture>,
     odd: Arc<dyn Texture>,
 }
 
 impl Checker {
-    pub fn new(scale: f64, even: Arc<dyn Texture>, odd: Arc<dyn Texture>) -> Checker {
+    pub fn new(scale: f32, even: Arc<dyn Texture>, odd: Arc<dyn Texture>) -> Checker {
         Checker { scale, even, odd }
     }
 
-    pub fn from_color(scale: f64, even_color: DVec3, odd_color: DVec3) -> Checker {
+    pub fn from_color(scale: f32, even_color: Vec3, odd_color: Vec3) -> Checker {
         Checker {
             scale,
             even: Arc::new(SolidColor::new(even_color)),
@@ -25,9 +25,9 @@ impl Checker {
 }
 
 impl Texture for Checker {
-    fn value(&self, u: f64, v: f64, p: &glam::DVec3) -> glam::DVec3 {
+    fn value(&self, u: f32, v: f32, p: &glam::Vec3) -> glam::Vec3 {
         let sines =
-            f64::sin(self.scale * p.x) * f64::sin(self.scale * p.y) * f64::sin(self.scale * p.z);
+            f32::sin(self.scale * p.x) * f32::sin(self.scale * p.y) * f32::sin(self.scale * p.z);
         if sines.is_sign_negative() {
             self.odd.value(u, v, p)
         } else {

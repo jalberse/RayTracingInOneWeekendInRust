@@ -1,29 +1,29 @@
 use crate::{ray::Ray, utils};
 
-use glam::DVec3;
+use glam::Vec3;
 use rand::{thread_rng, Rng};
 
 pub struct Camera {
     /// The lens is centered on the origin
-    origin: DVec3,
+    origin: Vec3,
     /// Horizontal vector in the focus plane.
     /// Magnitude is the width of the visible portion of the focus plane.
-    horizontal: DVec3,
+    horizontal: Vec3,
     /// Vertical vector in the focus plane.
     /// Magnitude is the width of the visible portion of the focus plane.
-    vertical: DVec3,
+    vertical: Vec3,
     /// Lower left corner visible in the focus plane.
-    lower_left_corner: DVec3,
+    lower_left_corner: Vec3,
     /// A "horizontal" vector in the plane of the lens
-    u: DVec3,
+    u: Vec3,
     /// A "vertical" vector in the plane of the lens
-    v: DVec3,
+    v: Vec3,
     /// Radius of the lens disk
-    lens_radius: f64,
+    lens_radius: f32,
     /// Shutter open time
-    time_start: f64,
+    time_start: f32,
     /// Shutter close time
-    time_end: f64,
+    time_end: f32,
 }
 
 impl Camera {
@@ -42,18 +42,18 @@ impl Camera {
     /// * `time_start` - Shutter open time.
     /// * `time_end` - Shutter close time.
     pub fn new(
-        look_from: DVec3,
-        look_at: DVec3,
-        view_up: DVec3,
-        vertical_field_of_view: f64,
-        aspect_ratio: f64,
-        aperture: f64,
-        focus_dist: f64,
-        time_start: f64,
-        time_end: f64,
+        look_from: Vec3,
+        look_at: Vec3,
+        view_up: Vec3,
+        vertical_field_of_view: f32,
+        aspect_ratio: f32,
+        aperture: f32,
+        focus_dist: f32,
+        time_start: f32,
+        time_end: f32,
     ) -> Camera {
-        let theta = f64::to_radians(vertical_field_of_view);
-        let h = f64::tan(theta / 2.0);
+        let theta = f32::to_radians(vertical_field_of_view);
+        let h = f32::tan(theta / 2.0);
         let viewport_height = 2.0 * h;
         let viewport_width = aspect_ratio * viewport_height;
 
@@ -93,7 +93,7 @@ impl Camera {
     /// Typical use will involve getting this ray's corresponding pixel's coordinates
     /// and dividing those by the width and height of your image to get `s` and `t` respectively,
     /// with some randomness introduced for anti-aliasing.
-    pub fn get_ray(&self, s: f64, t: f64) -> Ray {
+    pub fn get_ray(&self, s: f32, t: f32) -> Ray {
         let random_in_lens = self.lens_radius * utils::random_in_unit_disk();
         let offset = self.u * random_in_lens.x + self.v * random_in_lens.y;
 
