@@ -57,8 +57,4 @@ This repository is based on Peter Shirley's book [_Ray Tracing in One Weekend_](
 
 # A note on the "Shimmer" moniker and further development
 
-During development of this repository, I had been referring to the project as "Shimmer", and that's the name of the project in cargo.toml. The plan was to develop this repository into a more fully-featured ray tracing library called Shimmer to be deployed to crates.io.
-
-I still have plans to develop Shimmer, but that may or may not live in this repository. I may implement Shimmer as more closely aligned with the [PBRT](https://pbrt.org/) project's architecture. There's already a great Rust implementation of PBRT called [rs-pbrt](https://github.com/wahn/rs_pbrt) which (at the time of writing) is feature complete matching PBRT v3. But, I still have tentative plans to develop Shimmer for educational purposes. Shimmer would also be free to deviate from or expand on PBRT, where rs-pbrt purely aims to be a Rusty counterpart to the project. Further, PBRT V4 releases on March 28th 2023 (three days from the time of writing), and rs-pbrt has no current plans to upgrade to v4 (others may pick the project up, but the lead maintainer made a blog post saying they could not be the sole developer). So, developing against PBRT V4 could be a nice starting point for Shimmer.
-
-So, for now, this repository will be "a Rust implementation of Peter Shirley's books, plus some additional features as I care to develop them". I still plan to develop the Shimmer ray tracing project, but that may be in a new repository due to differing architecture decisions.
+Some names in this repository reference "shimmer". That was what I originally named this crate, but now [this repository](https://github.com/jalberse/shimmer) holds that moniker, and is where I've directed my interests in rendering.
